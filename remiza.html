@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SF 328-61 – Remiza</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="manifest" href="/static/manifest-remiza.json">
+<meta name="theme-color" content="#111111">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f5f5f5;
+            color: #111;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1.1fr;
+            height: 100vh;
+        }
+
+        .left {
+            background: white;
+            border-right: 3px solid #333;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header-title {
+            background: #111;
+            color: white;
+            text-align: center;
+            padding: 18px;
+            font-size: 2.2rem;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        .datetime {
+            text-align: center;
+            padding: 12px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            border-bottom: 2px solid #333;
+            background: #eee;
+        }
+
+        .info-block {
+            padding: 20px 24px;
+            flex: 1;
+        }
+
+        .adres {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #d32f2f;
+            margin-bottom: 16px;
+            line-height: 1.3;
+        }
+
+        .opis {
+            font-size: 1.35rem;
+            color: #d32f2f;
+            line-height: 1.4;
+            margin-bottom: 24px;
+        }
+
+        .status-box {
+            margin-top: 20px;
+            border: 2px solid #333;
+        }
+
+        .status-row {
+            display: flex;
+            border-bottom: 1px solid #333;
+        }
+
+        .status-row:last-child {
+            border-bottom: none;
+        }
+
+        .status-label {
+            width: 45%;
+            padding: 12px 16px;
+            background: #f0f0f0;
+            font-weight: bold;
+            border-right: 1px solid #333;
+            font-size: 1.1rem;
+        }
+
+        .status-value {
+            width: 55%;
+            padding: 12px 16px;
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+
+        .status-value.nowe { color: #d32f2f; }
+        .status-value.wyjazd { color: #ef6c00; }
+        .status-value.na-miejscu { color: #2e7d32; }
+
+        .empty-state {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            font-size: 1.8rem;
+            color: #888;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .right {
+            position: relative;
+            background: #e0e0e0;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .map-overlay {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            border: 2px solid #333;
+            padding: 12px 18px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            z-index: 1000;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .map-overlay .dystans {
+            color: #d32f2f;
+            font-size: 1.4rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="left">
+        <div class="header-title">SF 328-61</div>
+        <div class="datetime" id="datetime">--</div>
+
+        <div class="info-block" id="content">
+            <div class="empty-state">
+                Oczekiwanie na zgłoszenie...
+            </div>
+        </div>
+    </div>
+
+    <div class="right">
+        <div id="map"></div>
+        <div class="map-overlay" id="map-info" style="display:none;">
+            <div class="dystans" id="dystans">—</div>
+            <div id="czas-dojazdu">—</div>
+        </div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const API = "";
+
+// Współrzędne remizy
+const REMIZA_LAT = 50.204310;
+const REMIZA_LON = 18.977784;
+
+let map = null;
+let markerRemiza = null;
+let markerCel = null;
+let trasaLine = null;
+let aktualneId = null;
+
+function updateDateTime() {
+    const now = new Date();
+    document.getElementById("datetime").textContent =
+        now.toLocaleString("pl-PL", {
+            day: "2-digit", month: "2-digit", year: "numeric",
+            hour: "2-digit", minute: "2-digit"
+        }).replace(",", "");
+}
+setInterval(updateDateTime, 1000);
+updateDateTime();
+
+function initMap() {
+    map = L.map("map").setView([REMIZA_LAT, REMIZA_LON], 13);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 18,
+        attribution: "© OpenStreetMap"
+    }).addTo(map);
+}
+
+async function geocode(adres) {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(adres)}&limit=1`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.length === 0) return null;
+    return {
+        lat: parseFloat(data[0].lat),
+        lon: parseFloat(data[0].lon)
+    };
+}
+
+function clearMap() {
+    if (markerRemiza) map.removeLayer(markerRemiza);
+    if (markerCel) map.removeLayer(markerCel);
+    if (trasaLine) map.removeLayer(trasaLine);
+    markerRemiza = null;
+    markerCel = null;
+    trasaLine = null;
+}
+
+async function pokazNaMapie(adresZdarzenia) {
+    clearMap();
+    document.getElementById("map-info").style.display = "none";
+
+    const remiza = { lat: REMIZA_LAT, lon: REMIZA_LON };
+
+    const cel = await geocode(adresZdarzenia);
+    if (!cel) {
+        console.log("Nie znaleziono adresu zdarzenia");
+        return;
+    }
+
+    // ===== IKONY =====
+    const greenIcon = L.icon({
+        iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png",
+        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+    });
+
+    const redIcon = L.icon({
+        iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
+        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+    });
+
+    // Marker remizy (zielony)
+    markerRemiza = L.marker([remiza.lat, remiza.lon], {
+        icon: greenIcon
+    }).addTo(map).bindPopup("<b>Remiza</b>");
+
+    // Marker zdarzenia (czerwony)
+    markerCel = L.marker([cel.lat, cel.lon], {
+        icon: redIcon
+    }).addTo(map).bindPopup(`<b>Zdarzenie</b><br>${adresZdarzenia}`);
+
+    // ===== TRASA (OSRM) =====
+    const routeUrl = `https://router.project-osrm.org/route/v1/driving/${remiza.lon},${remiza.lat};${cel.lon},${cel.lat}?overview=full&geometries=geojson`;
+
+    try {
+        const routeRes = await fetch(routeUrl);
+        const routeData = await routeRes.json();
+
+        if (routeData.code !== "Ok" || !routeData.routes.length) {
+            trasaLine = L.polyline([[remiza.lat, remiza.lon], [cel.lat, cel.lon]], {
+                color: "#d32f2f", weight: 4
+            }).addTo(map);
+        } else {
+            const route = routeData.routes[0];
+            const coordinates = route.geometry.coordinates.map(c => [c[1], c[0]]);
+
+            trasaLine = L.polyline(coordinates, {
+                color: "#d32f2f",
+                weight: 5,
+                opacity: 0.9
+            }).addTo(map);
+
+            const dystansKm = (route.distance / 1000).toFixed(2);
+            const minuty = Math.round(route.duration / 60);
+
+            document.getElementById("dystans").textContent = `${dystansKm} km`;
+            document.getElementById("czas-dojazdu").textContent = `${minuty} min`;
+            document.getElementById("map-info").style.display = "block";
+        }
+
+        const group = L.featureGroup([markerRemiza, markerCel, trasaLine]);
+        map.fitBounds(group.getBounds().pad(0.2));
+
+    } catch (e) {
+        console.error("Błąd routingu:", e);
+        trasaLine = L.polyline([[remiza.lat, remiza.lon], [cel.lat, cel.lon]], {
+            color: "#d32f2f", weight: 4
+        }).addTo(map);
+        map.fitBounds(L.featureGroup([markerRemiza, markerCel]).getBounds().pad(0.25));
+    }
+}
+
+async function laduj() {
+    try {
+        const res = await fetch(API + "/zlecenia/");
+        const data = await res.json();
+
+        const aktywne = data.filter(z => !["Zakończenie", "W bazie"].includes(z.status));
+        const content = document.getElementById("content");
+
+        if (aktywne.length === 0) {
+            content.innerHTML = `<div class="empty-state">Oczekiwanie na zgłoszenie...</div>`;
+            clearMap();
+            document.getElementById("map-info").style.display = "none";
+            aktualneId = null;
+            return;
+        }
+
+        const z = aktywne[0];
+
+        if (z.id !== aktualneId) {
+            aktualneId = z.id;
+            pokazNaMapie(z.adres);
+        }
+
+        let statusClass = "";
+        if (z.status === "Nowe") statusClass = "nowe";
+        else if (z.status === "Wyjazd") statusClass = "wyjazd";
+        else if (z.status === "Na miejscu") statusClass = "na-miejscu";
+
+        content.innerHTML = `
+            <div class="adres">${z.adres}</div>
+            <div class="opis">${z.opis || "Brak dodatkowego opisu"}</div>
+
+            <div class="status-box">
+                <div class="status-row">
+                    <div class="status-label">Status</div>
+                    <div class="status-value ${statusClass}">${z.status}</div>
+                </div>
+                <div class="status-row">
+                    <div class="status-label">Numer</div>
+                    <div class="status-value">${z.numer}</div>
+                </div>
+                <div class="status-row">
+                    <div class="status-label">Zastęp</div>
+                    <div class="status-value">${z.zastep ? z.zastep.nazwa : "—"}</div>
+                </div>
+                <div class="status-row">
+                    <div class="status-label">Czas dyspozycji</div>
+                    <div class="status-value">${new Date(z.czas_dyspozycji).toLocaleString("pl-PL")}</div>
+                </div>
+            </div>
+        `;
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+initMap();
+laduj();
+setInterval(laduj, 100);
+</script>
+</body>
+</html>

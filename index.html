@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Dyspozycji – Stanowisko Kierowania</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: system-ui, sans-serif; background: #f0f2f5; padding: 20px; color: #111; }
+        h1 { margin-bottom: 8px; }
+        .subtitle { color: #666; margin-bottom: 24px; }
+        .container { max-width: 1300px; margin: 0 auto; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+            margin-bottom: 20px;
+        }
+        .card h2 { font-size: 1.15rem; margin-bottom: 16px; }
+
+        .form-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+        input, select, textarea, button {
+            padding: 10px 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 15px;
+        }
+        input, select, textarea { flex: 1; min-width: 160px; }
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        button:hover { background: #1d4ed8; }
+        .btn-green { background: #16a34a; }
+        .btn-green:hover { background: #15803d; }
+        .btn-orange { background: #ea580c; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+        th, td { padding: 11px 10px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8fafc; font-weight: 600; }
+
+        .status {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-block;
+        }
+        .status-Nowe { background: #dbeafe; color: #1e40af; }
+        .status-Wyjazd { background: #fef3c7; color: #92400e; }
+        .status-Na\ miejscu { background: #d1fae5; color: #065f46; }
+        .status-Lokalizacja { background: #ede9fe; color: #5b21b6; }
+        .status-Zakończenie { background: #e5e7eb; color: #374151; }
+        .status-W\ bazie { background: #e5e7eb; color: #374151; }
+
+        .komunikat-item {
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .komunikat-item:last-child { border-bottom: none; }
+        .komunikat-meta { font-size: 0.8rem; color: #888; margin-bottom: 4px; }
+        .komunikat-tresc { font-size: 0.95rem; }
+
+        .actions button { margin-right: 5px; padding: 6px 10px; font-size: 13px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>System Dyspozycji</h1>
+    <p class="subtitle">Stanowisko Kierowania</p>
+
+    <div class="grid">
+        <div>
+            <div class="card">
+                <h2>Nowe zlecenie</h2>
+                <div class="form-row">
+                    <input id="numer" placeholder="Numer formatki (np. F-001)">
+                    <input id="adres" placeholder="Adres">
+                </div>
+                <div class="form-row">
+                    <select id="zastep_id">
+                        <option value="">-- Wybierz zastęp --</option>
+                    </select>
+                    <textarea id="opis" placeholder="Opis / uwagi" rows="2"></textarea>
+                </div>
+                <button onclick="dodajZlecenie()">Zadysponuj</button>
+            </div>
+
+            <div class="card">
+                <h2>Wyślij komunikat</h2>
+                <div class="form-row">
+                    <textarea id="tresc-komunikatu" placeholder="Treść komunikatu do zastępów..." rows="3"></textarea>
+                </div>
+                <button class="btn-green" onclick="wyslijKomunikat()">Wyślij komunikat</button>
+            </div>
+        </div>
+
+        <div>
+            <div class="card">
+                <h2>Ostatnie komunikaty</h2>
+                <div id="lista-komunikatow">Ładowanie...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Aktualne zlecenia</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Numer</th>
+                    <th>Adres</th>
+                    <th>Zastęp</th>
+                    <th>Status</th>
+                    <th>Akcje</th>
+                </tr>
+            </thead>
+            <tbody id="lista"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+const API = "";
+
+async function ladujZastepy() {
+    const res = await fetch(API + "/zastepy/");
+    const data = await res.json();
+    const select = document.getElementById("zastep_id");
+    select.innerHTML = '<option value="">-- Wybierz zastęp --</option>';
+    data.forEach(z => {
+        select.innerHTML += `<option value="${z.id}">${z.nazwa}</option>`;
+    });
+}
+
+async function ladujZlecenia() {
+    const res = await fetch(API + "/zlecenia/");
+    const data = await res.json();
+    const tbody = document.getElementById("lista");
+    tbody.innerHTML = "";
+
+    data.forEach(z => {
+        const statusClass = "status-" + z.status.replaceAll(" ", "\\ ");
+        tbody.innerHTML += `
+            <tr>
+                <td>${z.id}</td>
+                <td><strong>${z.numer}</strong></td>
+                <td>${z.adres}</td>
+                <td>${z.zastep ? z.zastep.nazwa : "—"}</td>
+                <td><span class="status ${statusClass}">${z.status}</span></td>
+                <td class="actions">
+                    <button class="btn-orange" onclick="zmienStatus(${z.id}, 'Wyjazd')">Wyjazd</button>
+                    <button class="btn-green" onclick="zmienStatus(${z.id}, 'Na miejscu')">Na miejscu</button>
+                    <button onclick="zmienStatus(${z.id}, 'Lokalizacja')">Lokalizacja</button>
+                    <button onclick="zmienStatus(${z.id}, 'Zakończenie')">Zakończ</button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+async function dodajZlecenie() {
+    const body = {
+        numer: document.getElementById("numer").value.trim(),
+        adres: document.getElementById("adres").value.trim(),
+        opis: document.getElementById("opis").value.trim(),
+        zastep_id: document.getElementById("zastep_id").value || null
+    };
+    if (!body.numer || !body.adres) {
+        alert("Numer i adres są wymagane");
+        return;
+    }
+    await fetch(API + "/zlecenia/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+    });
+    document.getElementById("numer").value = "";
+    document.getElementById("adres").value = "";
+    document.getElementById("opis").value = "";
+    ladujZlecenia();
+}
+
+async function zmienStatus(id, status) {
+    await fetch(API + `/zlecenia/${id}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status, zmienil: "Dyspozytor" })
+    });
+    ladujZlecenia();
+}
+
+async function wyslijKomunikat() {
+    const tresc = document.getElementById("tresc-komunikatu").value.trim();
+    if (!tresc) {
+        alert("Wpisz treść komunikatu");
+        return;
+    }
+    await fetch(API + "/komunikaty/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tresc, nadawca: "Stanowisko Kierowania" })
+    });
+    document.getElementById("tresc-komunikatu").value = "";
+    ladujKomunikaty();
+    alert("Komunikat wysłany");
+}
+
+async function ladujKomunikaty() {
+    const res = await fetch(API + "/komunikaty/");
+    const data = await res.json();
+    const box = document.getElementById("lista-komunikatow");
+
+    if (data.length === 0) {
+        box.innerHTML = "<p style='color:#888'>Brak komunikatów</p>";
+        return;
+    }
+
+    box.innerHTML = data.slice(0, 10).map(k => `
+        <div class="komunikat-item">
+            <div class="komunikat-meta">
+                ${new Date(k.czas).toLocaleString("pl-PL")} • ${k.nadawca}
+            </div>
+            <div class="komunikat-tresc">${k.tresc}</div>
+        </div>
+    `).join("");
+}
+
+ladujZastepy();
+ladujZlecenia();
+ladujKomunikaty();
+setInterval(() => {
+    ladujZlecenia();
+    ladujKomunikaty();
+}, 5000);
+</script>
+</body>
+</html>

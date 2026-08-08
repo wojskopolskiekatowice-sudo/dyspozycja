@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Terminal-ST</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="manifest" href="/static/manifest-mobile.json">
+<meta name="theme-color" content="#00838f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            min-height: 100vh;
+            font-size: 15px;
+        }
+
+        .header {
+            background: #00838f;
+            padding: 11px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+            font-weight: bold;
+            font-size: 15px;
+            border-bottom: 1px solid #006064;
+        }
+
+        .back-btn {
+            background: #006064;
+            border: 1px solid #004d40;
+            color: white;
+            padding: 6px 12px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2px;
+            padding: 2px;
+            background: #111;
+        }
+
+        .menu-btn {
+            background: #2d2d2d;
+            border: none;
+            color: #e0e0e0;
+            padding: 28px 10px;
+            text-align: center;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 110px;
+        }
+
+        .menu-btn:active {
+            background: #3a3a3a;
+        }
+
+        .menu-btn .icon {
+            font-size: 26px;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .content {
+            padding: 8px;
+        }
+
+        .card {
+            background: #2d2d2d;
+            border: 1px solid #444;
+            padding: 12px;
+            margin-bottom: 6px;
+            cursor: pointer;
+        }
+
+        .card:active {
+            background: #3a3a3a;
+        }
+
+        .card-numer {
+            font-size: 17px;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .card-adres {
+            color: #80cbc4;
+            margin: 4px 0 8px;
+            font-size: 14px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            font-size: 12px;
+            font-weight: bold;
+            background: #555;
+            color: #fff;
+        }
+
+        .badge-Nowe { background: #1565c0; }
+        .badge-Wyjazd { background: #ef6c00; }
+        .badge-Na\ miejscu { background: #2e7d32; }
+        .badge-Lokalizacja { background: #6a1b9a; }
+        .badge-Zakończenie { background: #546e7a; }
+        .badge-W\ bazie { background: #546e7a; }
+
+        .empty {
+            text-align: center;
+            color: #777;
+            padding: 40px 20px;
+        }
+
+        .status-grid {
+            display: flex;
+            height: calc(100vh - 110px);
+            gap: 2px;
+            padding: 2px;
+            background: #111;
+        }
+
+        .status-btn {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-size: 15px;
+            font-weight: bold;
+            border: none;
+            color: #e0e0e0;
+            cursor: pointer;
+            padding: 8px 4px;
+            line-height: 1.3;
+            background: #2d2d2d;
+        }
+
+        .status-btn .time {
+            font-size: 11px;
+            margin-top: 8px;
+            font-weight: normal;
+            opacity: 0.85;
+        }
+
+        .status-active {
+            background: #00c853;
+            color: #000;
+        }
+
+        .status-inactive {
+            background: #2d2d2d;
+            color: #ccc;
+        }
+
+        .bottom-nav {
+            display: flex;
+            gap: 2px;
+            padding: 2px;
+            background: #111;
+        }
+
+        .bottom-nav button {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            background: #2d2d2d;
+            color: #e0e0e0;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .bottom-nav button:active {
+            background: #3a3a3a;
+        }
+
+        #map {
+            height: calc(100vh - 130px);
+            width: 100%;
+            border: 1px solid #444;
+        }
+
+        .map-info {
+            background: #2d2d2d;
+            border: 1px solid #444;
+            padding: 10px 12px;
+            margin: 6px;
+            font-size: 13px;
+        }
+
+        .komunikat-meta {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- MENU GŁÓWNE -->
+<div id="view-menu">
+    <div class="header">
+        <div>Terminal-ST: Połączono z SWD-ST</div>
+        <div style="font-size:13px;">●</div>
+    </div>
+
+    <div class="menu-grid">
+        <div class="menu-btn" onclick="pokaz('zdarzenia')">
+            <span class="icon">📋</span>
+            Zdarzenia
+        </div>
+        <div class="menu-btn" onclick="pokaz('komunikaty')">
+            <span class="icon">✉️</span>
+            Komunikaty
+        </div>
+        <div class="menu-btn" onclick="pokaz('statusy')">
+            <span class="icon">📡</span>
+            Statusy
+        </div>
+        <div class="menu-btn" onclick="alert('Funkcja w budowie')">
+            <span class="icon">📷</span>
+            Zrób zdjęcie
+        </div>
+        <div class="menu-btn" onclick="pokaz('mapa')">
+            <span class="icon">🗺️</span>
+            Pokaż na mapie
+        </div>
+        <div class="menu-btn" onclick="pokaz('gps')">
+            <span class="icon">🌐</span>
+            Informacje GPS
+        </div>
+        <div class="menu-btn" onclick="wlaczPowiadomienia()">
+            <span class="icon">🔔</span>
+            Powiadomienia
+        </div>
+    </div>
+</div>
+
+<!-- ZDARZENIA -->
+<div id="view-zdarzenia" style="display:none;">
+    <div class="header">
+        <button class="back-btn" onclick="pokaz('menu')">← Menu</button>
+        <div>Zdarzenia</div>
+        <div></div>
+    </div>
+    <div class="content" id="lista-zdarzen">
+        <div class="empty">Ładowanie...</div>
+    </div>
+</div>
+
+<!-- KOMUNIKATY -->
+<div id="view-komunikaty" style="display:none;">
+    <div class="header">
+        <button class="back-btn" onclick="pokaz('menu')">← Menu</button>
+        <div>Komunikaty</div>
+        <div></div>
+    </div>
+    <div class="content" id="lista-komunikatow-mobile">
+        <div class="empty">Ładowanie...</div>
+    </div>
+</div>
+
+<!-- STATUSY -->
+<div id="view-statusy" style="display:none;">
+    <div class="header">
+        <button class="back-btn" onclick="pokaz('menu')">← Menu</button>
+        <div id="status-title">Statusy</div>
+        <div></div>
+    </div>
+
+    <div class="status-grid" id="status-grid"></div>
+
+    <div class="bottom-nav">
+        <button onclick="pokaz('mapa')">Nawiguj</button>
+        <button onclick="pokaz('zdarzenia')">Lista zdarzeń</button>
+    </div>
+</div>
+
+<!-- MAPA -->
+<div id="view-mapa" style="display:none;">
+    <div class="header">
+        <button class="back-btn" onclick="pokaz('menu')">← Menu</button>
+        <div>Nawigacja</div>
+        <div></div>
+    </div>
+    <div class="map-info" id="map-info">Wybierz zdarzenie, aby zobaczyć trasę</div>
+    <div id="map"></div>
+</div>
+
+<!-- GPS -->
+<div id="view-gps" style="display:none;">
+    <div class="header">
+        <button class="back-btn" onclick="pokaz('menu')">← Menu</button>
+        <div>Informacje GPS</div>
+        <div></div>
+    </div>
+    <div class="map-info" id="gps-info">Pobieranie lokalizacji...</div>
+    <div style="padding: 8px;">
+        <button class="back-btn" style="width:100%; padding:14px;" onclick="pobierzGPS()">Odśwież lokalizację</button>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const API = "";
+let aktualneZlecenie = null;
+let aktualnyAdres = "";
+let historiaStatusow = {};
+let map = null;
+let markerCel = null;
+let markerJa = null;
+
+// ===== POWIADOMIENIA =====
+let ostatnieId = null;
+let powiadomieniaWlaczane = false;
+
+function wlaczPowiadomienia() {
+    if (!("Notification" in window)) {
+        alert("Twoja przeglądarka nie wspiera powiadomień");
+        return;
+    }
+
+    Notification.requestPermission().then(permission => {
+        if (permission === "granted") {
+            powiadomieniaWlaczane = true;
+            alert("Powiadomienia włączone");
+        } else {
+            alert("Nie udzielono zgody na powiadomienia");
+        }
+    });
+}
+
+async function sprawdzNoweZlecenia() {
+    try {
+        const res = await fetch(API + "/zlecenia/");
+        const data = await res.json();
+        const aktywne = data.filter(z => z.status === "Nowe");
+
+        if (aktywne.length > 0) {
+            const najnowsze = aktywne[0];
+
+            if (ostatnieId !== null && najnowsze.id !== ostatnieId) {
+                if (powiadomieniaWlaczane && Notification.permission === "granted") {
+                    new Notification("Nowe zgłoszenie!", {
+                        body: `${najnowsze.numer} – ${najnowsze.adres}`,
+                        requireInteraction: true
+                    });
+                }
+
+                if (navigator.vibrate) {
+                    navigator.vibrate([500, 200, 500, 200, 500]);
+                }
+
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.frequency.value = 880;
+                    gain.gain.value = 0.3;
+                    osc.start();
+                    setTimeout(() => osc.stop(), 400);
+                } catch(e) {}
+            }
+
+            ostatnieId = najnowsze.id;
+        }
+    } catch (e) {}
+}
+
+setInterval(sprawdzNoweZlecenia, 5000);
+
+// ===== RESZTA =====
+const STATUSY = [
+    { key: "Wyjazd", label: "Wyjazd" },
+    { key: "Na miejscu", label: "Na miejscu" },
+    { key: "Lokalizacja", label: "Sytuacja<br>opanowana" },
+    { key: "Zakończenie", label: "Zakończenie<br>działań" },
+    { key: "W bazie", label: "W bazie" }
+];
+
+function pokaz(widok) {
+    ["menu", "zdarzenia", "statusy", "mapa", "gps", "komunikaty"].forEach(v => {
+        const el = document.getElementById("view-" + v);
+        if (el) el.style.display = "none";
+    });
+    document.getElementById("view-" + widok).style.display = "block";
+
+    if (widok === "zdarzenia") ladujZdarzenia();
+    if (widok === "statusy" && !aktualneZlecenie) {
+        alert("Najpierw wybierz zdarzenie");
+        pokaz("zdarzenia");
+    }
+    if (widok === "mapa") initMapa();
+    if (widok === "gps") pobierzGPS();
+    if (widok === "komunikaty") ladujKomunikatyMobile();
+}
+
+async function ladujZdarzenia() {
+    try {
+        const res = await fetch(API + "/zlecenia/");
+        const data = await res.json();
+        const lista = document.getElementById("lista-zdarzen");
+        const aktywne = data.filter(z => !["Zakończenie", "W bazie"].includes(z.status));
+
+        if (aktywne.length === 0) {
+            lista.innerHTML = '<div class="empty">Brak aktywnych zdarzeń</div>';
+            return;
+        }
+
+        lista.innerHTML = "";
+        aktywne.forEach(z => {
+            const badgeClass = "badge-" + z.status.replace(" ", "\\ ");
+            lista.innerHTML += `
+                <div class="card" onclick="wybierzZdarzenie(${z.id}, '${z.numer}', '${z.adres.replace(/'/g, "\\'")}', '${z.status}')">
+                    <div class="card-numer">${z.numer}</div>
+                    <div class="card-adres">${z.adres}</div>
+                    <span class="badge ${badgeClass}">${z.status}</span>
+                </div>
+            `;
+        });
+    } catch (e) {
+        document.getElementById("lista-zdarzen").innerHTML = '<div class="empty">Błąd połączenia</div>';
+    }
+}
+
+async function wybierzZdarzenie(id, numer, adres, status) {
+    aktualneZlecenie = id;
+    aktualnyAdres = adres;
+    document.getElementById("status-title").innerText = numer;
+
+    try {
+        const res = await fetch(API + `/zlecenia/${id}/historia`);
+        const historia = await res.json();
+        historiaStatusow = {};
+        historia.forEach(h => historiaStatusow[h.status] = h.czas);
+    } catch(e) {
+        historiaStatusow = {};
+    }
+
+    renderujStatusy(status);
+    pokaz("statusy");
+}
+
+function renderujStatusy(aktualnyStatus) {
+    const grid = document.getElementById("status-grid");
+    grid.innerHTML = "";
+
+    STATUSY.forEach(s => {
+        const isActive = (s.key === aktualnyStatus) || historiaStatusow[s.key];
+        const time = historiaStatusow[s.key]
+            ? new Date(historiaStatusow[s.key]).toLocaleString("pl-PL", {
+                day: "2-digit", month: "2-digit", year: "numeric",
+                hour: "2-digit", minute: "2-digit", second: "2-digit"
+              }).replace(",", "")
+            : "";
+
+        grid.innerHTML += `
+            <button class="status-btn ${isActive ? 'status-active' : 'status-inactive'}"
+                    onclick="zmienStatus('${s.key}')">
+                ${s.label}
+                ${time ? `<div class="time">${time}</div>` : ""}
+            </button>
+        `;
+    });
+}
+
+async function zmienStatus(status) {
+    if (!aktualneZlecenie) return;
+
+    await fetch(API + `/zlecenia/${aktualneZlecenie}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: status, zmienil: "Zastęp" })
+    });
+
+    const res = await fetch(API + `/zlecenia/${aktualneZlecenie}`);
+    const z = await res.json();
+    wybierzZdarzenie(z.id, z.numer, z.adres, z.status);
+}
+
+async function ladujKomunikatyMobile() {
+    try {
+        const res = await fetch(API + "/komunikaty/");
+        const data = await res.json();
+        const box = document.getElementById("lista-komunikatow-mobile");
+
+        if (data.length === 0) {
+            box.innerHTML = '<div class="empty">Brak komunikatów</div>';
+            return;
+        }
+
+        box.innerHTML = data.map(k => `
+            <div class="card" style="cursor:default">
+                <div class="komunikat-meta">
+                    ${new Date(k.czas).toLocaleString("pl-PL")} • ${k.nadawca}
+                </div>
+                <div>${k.tresc}</div>
+            </div>
+        `).join("");
+    } catch (e) {
+        document.getElementById("lista-komunikatow-mobile").innerHTML = '<div class="empty">Błąd połączenia</div>';
+    }
+}
+
+function initMapa() {
+    const info = document.getElementById("map-info");
+
+    if (!map) {
+        map = L.map("map").setView([50.204310, 18.977784], 13);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            maxZoom: 19,
+            attribution: "© OpenStreetMap"
+        }).addTo(map);
+    }
+
+    if (markerCel) map.removeLayer(markerCel);
+    if (markerJa) map.removeLayer(markerJa);
+    if (window.trasaLine) {
+        map.removeLayer(window.trasaLine);
+        window.trasaLine = null;
+    }
+
+    if (!aktualnyAdres) {
+        info.innerHTML = "Najpierw wybierz zdarzenie z listy";
+        return;
+    }
+
+    info.innerHTML = `Cel: <strong>${aktualnyAdres}</strong><br>Wyznaczanie trasy...`;
+
+    // Najpierw geokodujemy cel
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(aktualnyAdres)}&limit=1`)
+        .then(r => r.json())
+        .then(data => {
+            if (!data.length) {
+                info.innerHTML = "Nie znaleziono adresu";
+                return;
+            }
+
+            const celLat = parseFloat(data[0].lat);
+            const celLon = parseFloat(data[0].lon);
+
+            markerCel = L.marker([celLat, celLon]).addTo(map)
+                .bindPopup(`<b>Cel</b><br>${aktualnyAdres}`).openPopup();
+
+            // Pobieramy aktualną pozycję
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    const jaLat = pos.coords.latitude;
+                    const jaLon = pos.coords.longitude;
+
+                    markerJa = L.circleMarker([jaLat, jaLon], {
+                        radius: 8,
+                        color: "#00e676",
+                        fillColor: "#00e676",
+                        fillOpacity: 0.9
+                    }).addTo(map).bindPopup("Twoja pozycja");
+
+                    // Prawdziwa trasa OSRM
+                    const routeUrl = `https://router.project-osrm.org/route/v1/driving/${jaLon},${jaLat};${celLon},${celLat}?overview=full&geometries=geojson`;
+
+                    fetch(routeUrl)
+                        .then(r => r.json())
+                        .then(routeData => {
+                            if (routeData.code === "Ok" && routeData.routes.length) {
+                                const route = routeData.routes[0];
+                                const coordinates = route.geometry.coordinates.map(c => [c[1], c[0]]);
+
+                                window.trasaLine = L.polyline(coordinates, {
+                                    color: "#00e676",
+                                    weight: 6,
+                                    opacity: 0.9
+                                }).addTo(map);
+
+                                const dystansKm = (route.distance / 1000).toFixed(1);
+                                const minuty = Math.round(route.duration / 60);
+
+                                info.innerHTML = `Cel: <strong>${aktualnyAdres}</strong><br>${dystansKm} km • ${minuty} min`;
+
+                                const group = L.featureGroup([markerCel, markerJa, window.trasaLine]);
+                                map.fitBounds(group.getBounds().pad(0.15));
+                            } else {
+                                // fallback
+                                map.fitBounds(L.featureGroup([markerCel, markerJa]).getBounds().pad(0.2));
+                                info.innerHTML = `Cel: <strong>${aktualnyAdres}</strong>`;
+                            }
+                        })
+                        .catch(() => {
+                            map.fitBounds(L.featureGroup([markerCel, markerJa]).getBounds().pad(0.2));
+                            info.innerHTML = `Cel: <strong>${aktualnyAdres}</strong>`;
+                        });
+
+                }, () => {
+                    map.setView([celLat, celLon], 15);
+                    info.innerHTML = `Cel: <strong>${aktualnyAdres}</strong><br>Brak lokalizacji GPS`;
+                }, { enableHighAccuracy: true });
+            } else {
+                map.setView([celLat, celLon], 15);
+            }
+        })
+        .catch(() => {
+            info.innerHTML = "Błąd wyszukiwania adresu";
+        });
+}
+
+function pobierzGPS() {
+    const box = document.getElementById("gps-info");
+    box.innerHTML = "Pobieranie lokalizacji...";
+
+    if (!navigator.geolocation) {
+        box.innerHTML = "Urządzenie nie wspiera GPS";
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        pos => {
+            const { latitude, longitude, accuracy } = pos.coords;
+            box.innerHTML = `
+                <strong>Aktualna pozycja:</strong><br>
+                Szerokość: ${latitude.toFixed(6)}<br>
+                Długość: ${longitude.toFixed(6)}<br>
+                Dokładność: ±${Math.round(accuracy)} m
+            `;
+        },
+        () => box.innerHTML = "Nie udało się pobrać lokalizacji. Włącz GPS.",
+        { enableHighAccuracy: true, timeout: 10000 }
+    );
+}
+
+pokaz("menu");
+</script>
+</body>
+</html>
