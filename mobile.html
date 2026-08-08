@@ -54,23 +54,23 @@
             background: #2d2d2d;
             border: none;
             color: #e0e0e0;
-            padding: 22px 8px;
+            padding: 28px 10px;
             text-align: center;
-            font-size: 14px;
+            font-size: 15px;
             font-weight: 500;
             cursor: pointer;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 100px;
+            min-height: 110px;
         }
 
         .menu-btn:active { background: #3a3a3a; }
 
         .menu-btn .icon {
-            font-size: 24px;
-            margin-bottom: 8px;
+            font-size: 26px;
+            margin-bottom: 10px;
             display: block;
         }
 
@@ -182,7 +182,7 @@
 
         .bottom-nav button:active { background: #3a3a3a; }
 
-        #map, #map-hydranty {
+        #map {
             height: calc(100vh - 130px);
             width: 100%;
             border: 1px solid #444;
@@ -201,9 +201,61 @@
             color: #888;
             margin-bottom: 5px;
         }
+
+        /* ALARM PEŁNOEKRANOWY */
+        #alarm-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: #b71c1c;
+            z-index: 9999;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+
+        #alarm-overlay.active {
+            display: flex;
+            animation: flash 0.4s infinite alternate;
+        }
+
+        @keyframes flash {
+            from { background: #b71c1c; }
+            to { background: #ff1744; }
+        }
+
+        #alarm-overlay h1 {
+            font-size: 2rem;
+            margin-bottom: 16px;
+        }
+
+        #alarm-overlay p {
+            font-size: 1.2rem;
+            margin-bottom: 24px;
+        }
+
+        #alarm-overlay button {
+            background: white;
+            color: #b71c1c;
+            border: none;
+            padding: 16px 32px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
+
+<!-- ALARM -->
+<div id="alarm-overlay">
+    <h1>🚨 NOWE ZGŁOSZENIE</h1>
+    <p id="alarm-text"></p>
+    <button onclick="wylaczAlarm()">OK – ROZUMIEM</button>
+</div>
 
 <!-- MENU GŁÓWNE -->
 <div id="view-menu">
@@ -237,9 +289,9 @@
             <span class="icon">🌐</span>
             Informacje GPS
         </div>
-        <div class="menu-btn" onclick="pokaz('hydranty')">
-            <span class="icon">🚰</span>
-            Hydranty
+        <div class="menu-btn" onclick="wlaczPowiadomienia()">
+            <span class="icon">🔔</span>
+            Włącz alarm
         </div>
     </div>
 </div>
@@ -289,7 +341,7 @@
     <input type="file" id="input-zdjecie" accept="image/*" capture="environment" style="display:none" onchange="wyslijZdjecie(event)">
 </div>
 
-<!-- MAPA TRASY -->
+<!-- MAPA -->
 <div id="view-mapa" style="display:none;">
     <div class="header">
         <button class="back-btn" onclick="pokaz('menu')">← Menu</button>
@@ -298,17 +350,6 @@
     </div>
     <div class="map-info" id="map-info">Wybierz zdarzenie, aby zobaczyć trasę</div>
     <div id="map"></div>
-</div>
-
-<!-- HYDRANTY -->
-<div id="view-hydranty" style="display:none;">
-    <div class="header">
-        <button class="back-btn" onclick="pokaz('menu')">← Menu</button>
-        <div>Mapa hydrantów</div>
-        <div></div>
-    </div>
-    <div class="map-info" id="hydranty-info">Pobieranie hydrantów...</div>
-    <div id="map-hydranty"></div>
 </div>
 
 <!-- GPS -->
@@ -335,8 +376,9 @@ let markerCel = null;
 let markerJa = null;
 let windowTrasaLine = null;
 
-let mapHydranty = null;
-let warstwaHydrantow = null;
+let ostatnieId = null;
+let alarmCtx = null;
+let alarmInterval = null;
 
 const STATUSY = [
     { key: "Wyjazd", label: "Wyjazd" },
@@ -347,7 +389,7 @@ const STATUSY = [
 ];
 
 function pokaz(widok) {
-    ["menu", "zdarzenia", "statusy", "mapa", "gps", "komunikaty", "hydranty"].forEach(v => {
+    ["menu", "zdarzenia", "statusy", "mapa", "gps", "komunikaty"].forEach(v => {
         const el = document.getElementById("view-" + v);
         if (el) el.style.display = "none";
     });
@@ -361,9 +403,108 @@ function pokaz(widok) {
     if (widok === "mapa") initMapa();
     if (widok === "gps") pobierzGPS();
     if (widok === "komunikaty") ladujKomunikatyMobile();
-    if (widok === "hydranty") initHydranty();
 }
 
+// ===== GŁOŚNY ALARM 5 SEKUND =====
+function wlaczPowiadomienia() {
+    if ("Notification" in window) {
+        Notification.requestPermission();
+    }
+    // Odblokowanie dźwięku na iOS (musi być po kliknięciu)
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        gain.gain.value = 0.01;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.05);
+        alarmCtx = ctx;
+        alert("Alarm włączony. Przy nowej formatce będzie głośny sygnał.");
+    } catch(e) {
+        alert("Włączono powiadomienia");
+    }
+}
+
+function odtworzAlarm(numer, adres) {
+    // Pełnoekranowy czerwony alert
+    document.getElementById("alarm-text").innerHTML = `<strong>${numer}</strong><br>${adres}`;
+    document.getElementById("alarm-overlay").classList.add("active");
+
+    // Powiadomienie systemowe
+    if (Notification.permission === "granted") {
+        new Notification("🚨 NOWE ZGŁOSZENIE", {
+            body: `${numer} – ${adres}`,
+            requireInteraction: true
+        });
+    }
+
+    // Wibracja
+    if (navigator.vibrate) {
+        navigator.vibrate([500, 200, 500, 200, 500, 200, 500, 200, 500]);
+    }
+
+    // Głośny dźwięk przez ~5 sekund
+    try {
+        const ctx = alarmCtx || new (window.AudioContext || window.webkitAudioContext)();
+        if (ctx.state === "suspended") ctx.resume();
+
+        let start = ctx.currentTime;
+        const duration = 5;
+
+        function beep(freq, t, len) {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = "square";
+            osc.frequency.value = freq;
+            gain.gain.value = 0.45;
+            osc.start(start + t);
+            osc.stop(start + t + len);
+        }
+
+        // Syrena na 5 sekund
+        for (let i = 0; i < 10; i++) {
+            beep(880, i * 0.5, 0.22);
+            beep(1400, i * 0.5 + 0.25, 0.22);
+        }
+
+        // Auto-wyłączenie overlay po 5 s (dźwięk i tak się skończy)
+        setTimeout(() => {
+            // zostawiamy overlay – user musi kliknąć OK
+        }, 5000);
+
+    } catch(e) {
+        console.log("Błąd dźwięku", e);
+    }
+}
+
+function wylaczAlarm() {
+    document.getElementById("alarm-overlay").classList.remove("active");
+}
+
+async function sprawdzNoweZlecenia() {
+    try {
+        const res = await fetch(API + "/zlecenia/");
+        const data = await res.json();
+        const nowe = data.filter(z => z.status === "Nowe");
+
+        if (nowe.length > 0) {
+            const najnowsze = nowe[0];
+
+            if (ostatnieId !== null && najnowsze.id !== ostatnieId) {
+                odtworzAlarm(najnowsze.numer, najnowsze.adres);
+            }
+            ostatnieId = najnowsze.id;
+        }
+    } catch (e) {}
+}
+
+setInterval(sprawdzNoweZlecenia, 4000);
+
+// ===== RESZTA =====
 async function ladujZdarzenia() {
     try {
         const res = await fetch(API + "/zlecenia/");
@@ -447,7 +588,6 @@ async function zmienStatus(status) {
     wybierzZdarzenie(z.id, z.numer, z.adres, z.status);
 }
 
-// ===== ZDJĘCIA =====
 async function wyslijZdjecie(event) {
     if (!aktualneZlecenie) {
         alert("Najpierw wybierz zdarzenie");
@@ -465,22 +605,16 @@ async function wyslijZdjecie(event) {
             method: "POST",
             body: formData
         });
-
-        if (res.ok) {
-            alert("Zdjęcie dodane do zdarzenia");
-        } else {
-            alert("Błąd wysyłania zdjęcia");
-        }
+        alert(res.ok ? "Zdjęcie dodane" : "Błąd wysyłania");
     } catch (e) {
         alert("Błąd połączenia");
     }
-
     event.target.value = "";
 }
 
 async function wyslijZdjecieZMenu(event) {
     if (!aktualneZlecenie) {
-        alert("Najpierw wybierz zdarzenie z listy");
+        alert("Najpierw wybierz zdarzenie");
         pokaz("zdarzenia");
         event.target.value = "";
         return;
@@ -488,7 +622,6 @@ async function wyslijZdjecieZMenu(event) {
     await wyslijZdjecie(event);
 }
 
-// ===== KOMUNIKATY =====
 async function ladujKomunikatyMobile() {
     try {
         const res = await fetch(API + "/komunikaty/");
@@ -513,7 +646,6 @@ async function ladujKomunikatyMobile() {
     }
 }
 
-// ===== MAPA TRASY =====
 function initMapa() {
     const info = document.getElementById("map-info");
 
@@ -584,9 +716,7 @@ function initMapa() {
                                 const minuty = Math.round(route.duration / 60);
 
                                 info.innerHTML = `Cel: <strong>${aktualnyAdres}</strong><br>${dystansKm} km • ${minuty} min`;
-
-                                const group = L.featureGroup([markerCel, markerJa, windowTrasaLine]);
-                                map.fitBounds(group.getBounds().pad(0.15));
+                                map.fitBounds(L.featureGroup([markerCel, markerJa, windowTrasaLine]).getBounds().pad(0.15));
                             } else {
                                 map.fitBounds(L.featureGroup([markerCel, markerJa]).getBounds().pad(0.2));
                                 info.innerHTML = `Cel: <strong>${aktualnyAdres}</strong>`;
@@ -594,12 +724,10 @@ function initMapa() {
                         })
                         .catch(() => {
                             map.fitBounds(L.featureGroup([markerCel, markerJa]).getBounds().pad(0.2));
-                            info.innerHTML = `Cel: <strong>${aktualnyAdres}</strong>`;
                         });
-
                 }, () => {
                     map.setView([celLat, celLon], 15);
-                    info.innerHTML = `Cel: <strong>${aktualnyAdres}</strong><br>Brak lokalizacji GPS`;
+                    info.innerHTML = `Cel: <strong>${aktualnyAdres}</strong>`;
                 }, { enableHighAccuracy: true });
             } else {
                 map.setView([celLat, celLon], 15);
@@ -608,97 +736,6 @@ function initMapa() {
         .catch(() => {
             info.innerHTML = "Błąd wyszukiwania adresu";
         });
-}
-
-// ===== MAPA HYDRANTÓW =====
-function initHydranty() {
-    const info = document.getElementById("hydranty-info");
-    info.innerHTML = "Pobieranie lokalizacji i hydrantów...";
-
-    if (!mapHydranty) {
-        mapHydranty = L.map("map-hydranty").setView([50.204310, 18.977784], 15);
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-            maxZoom: 19,
-            attribution: "© OpenStreetMap"
-        }).addTo(mapHydranty);
-    }
-
-    // Po pokazaniu kontenera mapa musi się odświeżyć
-    setTimeout(() => {
-        mapHydranty.invalidateSize();
-    }, 200);
-
-    const hydrantIcon = L.divIcon({
-        className: "",
-        html: `<div style="
-            background:#e53935;
-            width:16px;height:16px;
-            border-radius:50%;
-            border:2px solid #fff;
-            box-shadow:0 0 4px rgba(0,0,0,0.6);
-        "></div>`,
-        iconSize: [16, 16],
-        iconAnchor: [8, 8]
-    });
-
-    function ladujHydranty(lat, lon) {
-        const query = `
-            [out:json][timeout:25];
-            (
-              node["emergency"="fire_hydrant"](around:900,${lat},${lon});
-              node["fire_hydrant"](around:900,${lat},${lon});
-            );
-            out body;
-        `;
-
-        fetch("https://overpass-api.de/api/interpreter", {
-            method: "POST",
-            body: query
-        })
-        .then(r => r.json())
-        .then(data => {
-            if (warstwaHydrantow) {
-                mapHydranty.removeLayer(warstwaHydrantow);
-            }
-
-            warstwaHydrantow = L.layerGroup().addTo(mapHydranty);
-
-            const elementy = data.elements || [];
-            info.innerHTML = `Znaleziono <strong>${elementy.length}</strong> hydrantów (±900 m)`;
-
-            elementy.forEach(el => {
-                if (!el.lat || !el.lon) return;
-
-                const typ = el.tags?.["fire_hydrant:type"] || el.tags?.type || "hydrant";
-                const cisnienie = el.tags?.["fire_hydrant:pressure"] || "";
-                const opis = [
-                    `<b>Hydrant</b>`,
-                    `Typ: ${typ}`,
-                    cisnienie ? `Ciśnienie: ${cisnienie}` : "",
-                    `${el.lat.toFixed(5)}, ${el.lon.toFixed(5)}`
-                ].filter(Boolean).join("<br>");
-
-                L.marker([el.lat, el.lon], { icon: hydrantIcon })
-                    .bindPopup(opis)
-                    .addTo(warstwaHydrantow);
-            });
-
-            mapHydranty.setView([lat, lon], 16);
-        })
-        .catch(() => {
-            info.innerHTML = "Błąd pobierania danych (Overpass API)";
-        });
-    }
-
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            pos => ladujHydranty(pos.coords.latitude, pos.coords.longitude),
-            () => ladujHydranty(50.204310, 18.977784),
-            { enableHighAccuracy: true, timeout: 8000 }
-        );
-    } else {
-        ladujHydranty(50.204310, 18.977784);
-    }
 }
 
 function pobierzGPS() {
