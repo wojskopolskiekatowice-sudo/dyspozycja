@@ -6,229 +6,203 @@
     <title>Terminal-ST</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
 
         body {
             font-family: Arial, Helvetica, sans-serif;
             background: #1a1a1a;
-            color: #e8e8e8;
+            color: #e0e0e0;
             min-height: 100vh;
             font-size: 15px;
         }
 
-        /* NAGŁÓWEK */
         .header {
-            background: #2c2c2c;
-            padding: 12px 14px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            border-bottom: 1px solid #111;
-            min-height: 48px;
-        }
-        .header-logo {
-            width: 28px; height: 28px;
             background: #00838f;
-            border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 14px;
-        }
-        .header-title {
-            flex: 1;
-            font-size: 15px;
+            padding: 11px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
             font-weight: bold;
-            color: #fff;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .back-btn {
-            background: #333;
-            border: 1px solid #555;
-            color: #eee;
-            padding: 6px 12px;
-            font-size: 13px;
+            font-size: 15px;
+            border-bottom: 1px solid #006064;
         }
 
-        /* MENU 2x3 */
+        .back-btn {
+            background: #006064;
+            border: 1px solid #004d40;
+            color: white;
+            padding: 6px 12px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
         .menu-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            padding: 12px;
+            gap: 2px;
+            padding: 2px;
+            background: #111;
         }
+
         .menu-btn {
-            background: linear-gradient(180deg, #2a2a2a 0%, #1f1f1f 100%);
-            border: 1px solid #3a3a3a;
-            border-radius: 6px;
-            padding: 22px 8px 16px;
-            text-align: center;
+            background: #2d2d2d;
+            border: none;
             color: #e0e0e0;
-            font-size: 14px;
-            min-height: 120px;
+            padding: 28px 10px;
+            text-align: center;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.4);
-        }
-        .menu-btn:active { background: #333; }
-        .menu-btn .icon {
-            font-size: 42px;
-            margin-bottom: 12px;
-            line-height: 1;
-            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+            min-height: 110px;
         }
 
-        /* LISTA / KARTY */
-        .content { padding: 10px; }
-        .card {
-            background: #252525;
-            border: 1px solid #3a3a3a;
-            padding: 12px;
-            margin-bottom: 8px;
+        .menu-btn:active { background: #3a3a3a; }
+
+        .menu-btn .icon {
+            font-size: 26px;
+            margin-bottom: 10px;
+            display: block;
         }
-        .card-numer { font-size: 17px; font-weight: bold; }
-        .card-adres { color: #80cbc4; margin: 4px 0 8px; font-size: 14px; }
+
+        .content { padding: 8px; }
+
+        .card {
+            background: #2d2d2d;
+            border: 1px solid #444;
+            padding: 12px;
+            margin-bottom: 6px;
+            cursor: pointer;
+        }
+
+        .card:active { background: #3a3a3a; }
+
+        .card-numer {
+            font-size: 17px;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .card-adres {
+            color: #80cbc4;
+            margin: 4px 0 8px;
+            font-size: 14px;
+        }
+
         .badge {
             display: inline-block;
             padding: 3px 8px;
             font-size: 12px;
             font-weight: bold;
-            background: #444;
+            background: #555;
+            color: #fff;
         }
+
         .badge-Nowe { background: #1565c0; }
         .badge-Wyjazd { background: #ef6c00; }
         .badge-Na\ miejscu { background: #2e7d32; }
         .badge-Lokalizacja { background: #6a1b9a; }
         .badge-Zakończenie { background: #546e7a; }
         .badge-W\ bazie { background: #546e7a; }
-        .empty { text-align: center; color: #666; padding: 40px 20px; }
 
-        /* STATUSY – pionowe pełne rzędy jak w oryginale */
-        .status-list {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            padding: 10px;
-            min-height: calc(100vh - 60px);
-        }
-        .status-row {
-            flex: 1;
-            min-height: 70px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: #2a2a2a;
-            border: 1px solid #3a3a3a;
-            color: #eee;
-            font-size: 18px;
-            font-weight: 500;
+        .empty {
             text-align: center;
-            padding: 10px;
+            color: #777;
+            padding: 40px 20px;
         }
-        .status-row.active {
+
+        .status-grid {
+            display: flex;
+            height: calc(100vh - 160px);
+            gap: 2px;
+            padding: 2px;
+            background: #111;
+        }
+
+        .status-btn {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-size: 15px;
+            font-weight: bold;
+            border: none;
+            color: #e0e0e0;
+            cursor: pointer;
+            padding: 8px 4px;
+            line-height: 1.3;
+            background: #2d2d2d;
+        }
+
+        .status-btn .time {
+            font-size: 11px;
+            margin-top: 8px;
+            font-weight: normal;
+            opacity: 0.85;
+        }
+
+        .status-active {
             background: #00c853;
             color: #000;
-            border-color: #00e676;
-            font-weight: bold;
-        }
-        .status-row .time {
-            font-size: 13px;
-            margin-top: 6px;
-            font-weight: normal;
-            opacity: 0.9;
         }
 
-        /* KARTA ZDARZENIA – tabela */
-        .karta-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 12px 0;
-        }
-        .karta-table td {
-            border: 1px solid #555;
-            padding: 12px 14px;
-            font-size: 15px;
-        }
-        .karta-table td:first-child {
-            background: #2a2a2a;
-            width: 35%;
-            font-weight: bold;
+        .status-inactive {
+            background: #2d2d2d;
             color: #ccc;
         }
-        .karta-table td:last-child {
-            background: #1f1f1f;
-            color: #fff;
-        }
-        .karta-actions {
+
+        .bottom-nav {
             display: flex;
-            gap: 10px;
-            padding: 12px;
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: #1a1a1a;
-            border-top: 1px solid #333;
+            gap: 2px;
+            padding: 2px;
+            background: #111;
         }
-        .karta-actions button {
+
+        .bottom-nav button {
             flex: 1;
-            padding: 16px;
-            background: #2a2a2a;
-            border: 1px solid #444;
-            color: #eee;
-            font-size: 15px;
-        }
-
-        /* GPS */
-        .gps-list {
-            padding: 8px 0;
-        }
-        .gps-row {
-            display: flex;
-            padding: 14px 16px;
-            border-bottom: 1px solid #2a2a2a;
-            font-size: 15px;
-        }
-        .gps-label {
-            width: 42%;
-            color: #aaa;
-        }
-        .gps-value {
-            width: 58%;
-            color: #fff;
-            font-weight: 500;
-        }
-        .gps-actions {
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .gps-actions button {
-            width: 100%;
-            padding: 14px;
-            background: #2a2a2a;
-            border: 1px solid #444;
-            color: #eee;
-            font-size: 15px;
-        }
-
-        /* MAPA */
-        #map {
-            height: calc(100vh - 100px);
-            width: 100%;
-        }
-        .map-info {
-            background: #2a2a2a;
-            padding: 10px 14px;
+            padding: 14px 6px;
+            border: none;
+            background: #2d2d2d;
+            color: #e0e0e0;
             font-size: 13px;
-            border-bottom: 1px solid #333;
+            font-weight: 500;
+            cursor: pointer;
         }
 
-        /* ALARM */
+        .bottom-nav button:active { background: #3a3a3a; }
+
+        #map {
+            height: calc(100vh - 130px);
+            width: 100%;
+            border: 1px solid #444;
+        }
+
+        .map-info {
+            background: #2d2d2d;
+            border: 1px solid #444;
+            padding: 10px 12px;
+            margin: 6px;
+            font-size: 13px;
+        }
+
+        .komunikat-meta {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 5px;
+        }
+
+        /* ALARM PEŁNOEKRANOWY */
         #alarm-overlay {
             display: none;
             position: fixed;
@@ -240,28 +214,38 @@
             justify-content: center;
             color: white;
             text-align: center;
-            padding: 24px;
+            padding: 20px;
         }
+
         #alarm-overlay.active {
             display: flex;
-            animation: flash 0.35s infinite alternate;
+            animation: flash 0.4s infinite alternate;
         }
+
         @keyframes flash {
             from { background: #b71c1c; }
             to { background: #ff1744; }
         }
-        #alarm-overlay h1 { font-size: 1.8rem; margin-bottom: 12px; }
-        #alarm-overlay p { font-size: 1.15rem; margin-bottom: 28px; }
-        #alarm-overlay button {
-            background: #fff;
-            color: #b71c1c;
-            border: none;
-            padding: 16px 36px;
-            font-size: 1.1rem;
-            font-weight: bold;
+
+        #alarm-overlay h1 {
+            font-size: 2rem;
+            margin-bottom: 16px;
         }
 
-        .komunikat-meta { font-size: 12px; color: #888; margin-bottom: 5px; }
+        #alarm-overlay p {
+            font-size: 1.2rem;
+            margin-bottom: 24px;
+        }
+
+        #alarm-overlay button {
+            background: white;
+            color: #b71c1c;
+            border: none;
+            padding: 16px 32px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -273,15 +257,16 @@
     <button onclick="wylaczAlarm()">OK – ROZUMIEM</button>
 </div>
 
-<!-- MENU -->
+<!-- MENU GŁÓWNE -->
 <div id="view-menu">
     <div class="header">
-        <div class="header-logo">📟</div>
-        <div class="header-title">Terminal-ST: Połączono z SWD-ST</div>
+        <div>Terminal-ST: Połączono z SWD-ST</div>
+        <div style="font-size:13px;">●</div>
     </div>
+
     <div class="menu-grid">
         <div class="menu-btn" onclick="pokaz('zdarzenia')">
-            <span class="icon">📓</span>
+            <span class="icon">📋</span>
             Zdarzenia
         </div>
         <div class="menu-btn" onclick="pokaz('komunikaty')">
@@ -304,6 +289,10 @@
             <span class="icon">🌐</span>
             Informacje GPS
         </div>
+        <div class="menu-btn" onclick="wlaczPowiadomienia()">
+            <span class="icon">🔔</span>
+            Włącz alarm
+        </div>
     </div>
 </div>
 
@@ -312,72 +301,67 @@
 <!-- ZDARZENIA -->
 <div id="view-zdarzenia" style="display:none;">
     <div class="header">
-        <button class="back-btn" onclick="pokaz('menu')">←</button>
-        <div class="header-title">Zdarzenia</div>
+        <button class="back-btn" onclick="pokaz('menu')">← Menu</button>
+        <div>Zdarzenia</div>
+        <div></div>
     </div>
-    <div class="content" id="lista-zdarzen"><div class="empty">Ładowanie...</div></div>
-</div>
-
-<!-- KARTA ZDARZENIA -->
-<div id="view-karta" style="display:none;">
-    <div class="header">
-        <button class="back-btn" onclick="pokaz('zdarzenia')">←</button>
-        <div class="header-title">Karta zdarzenia</div>
-    </div>
-    <div class="content" id="karta-content"></div>
-    <div class="karta-actions">
-        <button onclick="pokaz('mapa')">Pokaż na mapie</button>
-        <button onclick="pokaz('mapa')">Nawiguj</button>
+    <div class="content" id="lista-zdarzen">
+        <div class="empty">Ładowanie...</div>
     </div>
 </div>
 
 <!-- KOMUNIKATY -->
 <div id="view-komunikaty" style="display:none;">
     <div class="header">
-        <button class="back-btn" onclick="pokaz('menu')">←</button>
-        <div class="header-title">Komunikaty</div>
+        <button class="back-btn" onclick="pokaz('menu')">← Menu</button>
+        <div>Komunikaty</div>
+        <div></div>
     </div>
-    <div class="content" id="lista-komunikatow-mobile"><div class="empty">Ładowanie...</div></div>
+    <div class="content" id="lista-komunikatow-mobile">
+        <div class="empty">Ładowanie...</div>
+    </div>
 </div>
 
 <!-- STATUSY -->
 <div id="view-statusy" style="display:none;">
     <div class="header">
-        <button class="back-btn" onclick="pokaz('menu')">←</button>
-        <div class="header-title" id="status-title">Statusy</div>
+        <button class="back-btn" onclick="pokaz('menu')">← Menu</button>
+        <div id="status-title">Statusy</div>
+        <div></div>
     </div>
-    <div class="status-list" id="status-grid"></div>
+
+    <div class="status-grid" id="status-grid"></div>
+
+    <div class="bottom-nav">
+        <button onclick="pokaz('mapa')">Nawiguj</button>
+        <button onclick="document.getElementById('input-zdjecie').click()">Zrób zdjęcie</button>
+        <button onclick="pokaz('zdarzenia')">Lista</button>
+    </div>
+
+    <input type="file" id="input-zdjecie" accept="image/*" capture="environment" style="display:none" onchange="wyslijZdjecie(event)">
 </div>
 
 <!-- MAPA -->
 <div id="view-mapa" style="display:none;">
     <div class="header">
-        <button class="back-btn" onclick="pokaz('menu')">←</button>
-        <div class="header-title">Nawigacja</div>
+        <button class="back-btn" onclick="pokaz('menu')">← Menu</button>
+        <div>Nawigacja</div>
+        <div></div>
     </div>
-    <div class="map-info" id="map-info">Wybierz zdarzenie</div>
+    <div class="map-info" id="map-info">Wybierz zdarzenie, aby zobaczyć trasę</div>
     <div id="map"></div>
 </div>
 
 <!-- GPS -->
 <div id="view-gps" style="display:none;">
     <div class="header">
-        <button class="back-btn" onclick="pokaz('menu')">←</button>
-        <div class="header-title">Informacje GPS</div>
+        <button class="back-btn" onclick="pokaz('menu')">← Menu</button>
+        <div>Informacje GPS</div>
+        <div></div>
     </div>
-    <div class="gps-list" id="gps-list">
-        <div class="gps-row"><div class="gps-label">Dł. geogr.</div><div class="gps-value" id="gps-lon">—</div></div>
-        <div class="gps-row"><div class="gps-label">Szer. geogr.</div><div class="gps-value" id="gps-lat">—</div></div>
-        <div class="gps-row"><div class="gps-label">Szybkość</div><div class="gps-value" id="gps-speed">0.0 km/h</div></div>
-        <div class="gps-row"><div class="gps-label">Wysokość</div><div class="gps-value" id="gps-alt">0.0 m n.p.m</div></div>
-        <div class="gps-row"><div class="gps-label">Azymut</div><div class="gps-value" id="gps-head">0.0°</div></div>
-        <div class="gps-row"><div class="gps-label">Dostawca</div><div class="gps-value">GPS / Sieć</div></div>
-        <div class="gps-row"><div class="gps-label">Dokładność</div><div class="gps-value" id="gps-acc">—</div></div>
-        <div class="gps-row"><div class="gps-label">Czas odczytu</div><div class="gps-value" id="gps-time">—</div></div>
-    </div>
-    <div class="gps-actions">
-        <button onclick="pobierzGPS()">Odśwież pozycję</button>
-        <button onclick="pokaz('mapa')">Znajdź adres / mapa</button>
+    <div class="map-info" id="gps-info">Pobieranie lokalizacji...</div>
+    <div style="padding: 8px;">
+        <button class="back-btn" style="width:100%; padding:14px;" onclick="pobierzGPS()">Odśwież lokalizację</button>
     </div>
 </div>
 
@@ -386,66 +370,115 @@
 const API = "";
 let aktualneZlecenie = null;
 let aktualnyAdres = "";
-let aktualnyOpis = "";
-let aktualnyNumer = "";
 let historiaStatusow = {};
-let map = null, markerCel = null, markerJa = null, windowTrasaLine = null;
+let map = null;
+let markerCel = null;
+let markerJa = null;
+let windowTrasaLine = null;
+
 let ostatnieId = null;
 let alarmCtx = null;
+let alarmInterval = null;
 
 const STATUSY = [
     { key: "Wyjazd", label: "Wyjazd" },
     { key: "Na miejscu", label: "Na miejscu" },
-    { key: "Lokalizacja", label: "Lokalizacja zdarzenia" },
-    { key: "Zakończenie", label: "Zakończenie działań" },
+    { key: "Lokalizacja", label: "Sytuacja<br>opanowana" },
+    { key: "Zakończenie", label: "Zakończenie<br>działań" },
     { key: "W bazie", label: "W bazie" }
 ];
 
 function pokaz(widok) {
-    ["menu","zdarzenia","karta","statusy","mapa","gps","komunikaty"].forEach(v => {
+    ["menu", "zdarzenia", "statusy", "mapa", "gps", "komunikaty"].forEach(v => {
         const el = document.getElementById("view-" + v);
         if (el) el.style.display = "none";
     });
     document.getElementById("view-" + widok).style.display = "block";
 
     if (widok === "zdarzenia") ladujZdarzenia();
-    if (widok === "statusy") {
-        if (!aktualneZlecenie) { alert("Najpierw wybierz zdarzenie"); pokaz("zdarzenia"); return; }
-        // odśwież statusy
+    if (widok === "statusy" && !aktualneZlecenie) {
+        alert("Najpierw wybierz zdarzenie");
+        pokaz("zdarzenia");
     }
     if (widok === "mapa") initMapa();
     if (widok === "gps") pobierzGPS();
     if (widok === "komunikaty") ladujKomunikatyMobile();
-    if (widok === "karta") renderKarta();
 }
 
-// ===== ALARM =====
+// ===== GŁOŚNY ALARM 5 SEKUND =====
+function wlaczPowiadomienia() {
+    if ("Notification" in window) {
+        Notification.requestPermission();
+    }
+    // Odblokowanie dźwięku na iOS (musi być po kliknięciu)
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        gain.gain.value = 0.01;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.05);
+        alarmCtx = ctx;
+        alert("Alarm włączony. Przy nowej formatce będzie głośny sygnał.");
+    } catch(e) {
+        alert("Włączono powiadomienia");
+    }
+}
+
 function odtworzAlarm(numer, adres) {
+    // Pełnoekranowy czerwony alert
     document.getElementById("alarm-text").innerHTML = `<strong>${numer}</strong><br>${adres}`;
     document.getElementById("alarm-overlay").classList.add("active");
 
+    // Powiadomienie systemowe
     if (Notification.permission === "granted") {
-        new Notification("🚨 NOWE ZGŁOSZENIE", { body: `${numer} – ${adres}`, requireInteraction: true });
+        new Notification("🚨 NOWE ZGŁOSZENIE", {
+            body: `${numer} – ${adres}`,
+            requireInteraction: true
+        });
     }
-    if (navigator.vibrate) navigator.vibrate([600,200,600,200,600,200,600]);
 
+    // Wibracja
+    if (navigator.vibrate) {
+        navigator.vibrate([500, 200, 500, 200, 500, 200, 500, 200, 500]);
+    }
+
+    // Głośny dźwięk przez ~5 sekund
     try {
         const ctx = alarmCtx || new (window.AudioContext || window.webkitAudioContext)();
         if (ctx.state === "suspended") ctx.resume();
-        const start = ctx.currentTime;
-        for (let i = 0; i < 10; i++) {
-            [880, 1400].forEach((freq, j) => {
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.connect(gain); gain.connect(ctx.destination);
-                osc.type = "square";
-                osc.frequency.value = freq;
-                gain.gain.value = 0.5;
-                osc.start(start + i * 0.5 + j * 0.25);
-                osc.stop(start + i * 0.5 + j * 0.25 + 0.2);
-            });
+
+        let start = ctx.currentTime;
+        const duration = 5;
+
+        function beep(freq, t, len) {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = "square";
+            osc.frequency.value = freq;
+            gain.gain.value = 0.45;
+            osc.start(start + t);
+            osc.stop(start + t + len);
         }
-    } catch(e) {}
+
+        // Syrena na 5 sekund
+        for (let i = 0; i < 10; i++) {
+            beep(880, i * 0.5, 0.22);
+            beep(1400, i * 0.5 + 0.25, 0.22);
+        }
+
+        // Auto-wyłączenie overlay po 5 s (dźwięk i tak się skończy)
+        setTimeout(() => {
+            // zostawiamy overlay – user musi kliknąć OK
+        }, 5000);
+
+    } catch(e) {
+        console.log("Błąd dźwięku", e);
+    }
 }
 
 function wylaczAlarm() {
@@ -457,158 +490,136 @@ async function sprawdzNoweZlecenia() {
         const res = await fetch(API + "/zlecenia/");
         const data = await res.json();
         const nowe = data.filter(z => z.status === "Nowe");
+
         if (nowe.length > 0) {
-            const n = nowe[0];
-            if (ostatnieId !== null && n.id !== ostatnieId) odtworzAlarm(n.numer, n.adres);
-            ostatnieId = n.id;
+            const najnowsze = nowe[0];
+
+            if (ostatnieId !== null && najnowsze.id !== ostatnieId) {
+                odtworzAlarm(najnowsze.numer, najnowsze.adres);
+            }
+            ostatnieId = najnowsze.id;
         }
-    } catch(e) {}
+    } catch (e) {}
 }
+
 setInterval(sprawdzNoweZlecenia, 4000);
 
-// Odblokowanie dźwięku przy pierwszym kliknięciu
-document.body.addEventListener("click", function initAudio() {
-    try {
-        alarmCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const o = alarmCtx.createOscillator();
-        const g = alarmCtx.createGain();
-        g.gain.value = 0.001;
-        o.connect(g); g.connect(alarmCtx.destination);
-        o.start(); o.stop(alarmCtx.currentTime + 0.01);
-    } catch(e) {}
-    document.body.removeEventListener("click", initAudio);
-}, { once: true });
-
-// ===== ZDARZENIA / KARTA =====
+// ===== RESZTA =====
 async function ladujZdarzenia() {
     try {
         const res = await fetch(API + "/zlecenia/");
         const data = await res.json();
         const lista = document.getElementById("lista-zdarzen");
-        const aktywne = data.filter(z => !["Zakończenie","W bazie"].includes(z.status));
+        const aktywne = data.filter(z => !["Zakończenie", "W bazie"].includes(z.status));
 
-        if (!aktywne.length) {
+        if (aktywne.length === 0) {
             lista.innerHTML = '<div class="empty">Brak aktywnych zdarzeń</div>';
             return;
         }
+
         lista.innerHTML = "";
         aktywne.forEach(z => {
-            const bc = "badge-" + z.status.replace(" ", "\\ ");
+            const badgeClass = "badge-" + z.status.replace(" ", "\\ ");
             lista.innerHTML += `
-                <div class="card" onclick="otworzKarte(${z.id}, '${z.numer}', '${(z.adres||'').replace(/'/g,"\\'")}', '${(z.opis||'').replace(/'/g,"\\'")}', '${z.status}', '${z.czas_dyspozycji}')">
+                <div class="card" onclick="wybierzZdarzenie(${z.id}, '${z.numer}', '${z.adres.replace(/'/g, "\\'")}', '${z.status}')">
                     <div class="card-numer">${z.numer}</div>
                     <div class="card-adres">${z.adres}</div>
-                    <span class="badge ${bc}">${z.status}</span>
-                </div>`;
+                    <span class="badge ${badgeClass}">${z.status}</span>
+                </div>
+            `;
         });
-    } catch(e) {
+    } catch (e) {
         document.getElementById("lista-zdarzen").innerHTML = '<div class="empty">Błąd połączenia</div>';
     }
 }
 
-async function otworzKarte(id, numer, adres, opis, status, czas) {
+async function wybierzZdarzenie(id, numer, adres, status) {
     aktualneZlecenie = id;
     aktualnyAdres = adres;
-    aktualnyOpis = opis;
-    aktualnyNumer = numer;
+    document.getElementById("status-title").innerText = numer;
 
     try {
         const res = await fetch(API + `/zlecenia/${id}/historia`);
         const historia = await res.json();
         historiaStatusow = {};
         historia.forEach(h => historiaStatusow[h.status] = h.czas);
-    } catch(e) { historiaStatusow = {}; }
+    } catch(e) {
+        historiaStatusow = {};
+    }
 
-    renderKarta(status, czas);
-    pokaz("karta");
-}
-
-function renderKarta(status, czas) {
-    const czasStr = czas ? new Date(czas).toLocaleString("pl-PL") : "—";
-    document.getElementById("karta-content").innerHTML = `
-        <table class="karta-table">
-            <tr><td>Rodzaj:</td><td>${aktualnyOpis ? "Zdarzenie" : "Zgłoszenie"}</td></tr>
-            <tr><td>Otrzymano:</td><td>${czasStr}</td></tr>
-            <tr><td>Adres:</td><td>${aktualnyAdres || "—"}</td></tr>
-            <tr><td>Opis:</td><td>${aktualnyOpis || "—"}</td></tr>
-            <tr><td>Status:</td><td>${status || "—"}</td></tr>
-            <tr><td>Numer:</td><td>${aktualnyNumer || "—"}</td></tr>
-        </table>
-        <div style="padding:12px;">
-            <button class="status-row" style="width:100%;min-height:50px;font-size:16px;" onclick="pokaz('statusy')">Ustaw statusy →</button>
-        </div>
-    `;
+    renderujStatusy(status);
+    pokaz("statusy");
 }
 
 function renderujStatusy(aktualnyStatus) {
     const grid = document.getElementById("status-grid");
     grid.innerHTML = "";
-    document.getElementById("status-title").innerText = "Statusy – " + (aktualnyNumer || "");
 
     STATUSY.forEach(s => {
         const isActive = (s.key === aktualnyStatus) || historiaStatusow[s.key];
         const time = historiaStatusow[s.key]
             ? new Date(historiaStatusow[s.key]).toLocaleString("pl-PL", {
-                day:"2-digit", month:"2-digit", year:"numeric",
-                hour:"2-digit", minute:"2-digit", second:"2-digit"
+                day: "2-digit", month: "2-digit", year: "numeric",
+                hour: "2-digit", minute: "2-digit", second: "2-digit"
               }).replace(",", "")
             : "";
 
         grid.innerHTML += `
-            <div class="status-row ${isActive ? 'active' : ''}" onclick="zmienStatus('${s.key}')">
+            <button class="status-btn ${isActive ? 'status-active' : 'status-inactive'}"
+                    onclick="zmienStatus('${s.key}')">
                 ${s.label}
                 ${time ? `<div class="time">${time}</div>` : ""}
-            </div>`;
+            </button>
+        `;
     });
 }
 
 async function zmienStatus(status) {
     if (!aktualneZlecenie) return;
+
     await fetch(API + `/zlecenia/${aktualneZlecenie}/status`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status, zmienil: "Zastęp" })
+        body: JSON.stringify({ status: status, zmienil: "Zastęp" })
     });
+
     const res = await fetch(API + `/zlecenia/${aktualneZlecenie}`);
     const z = await res.json();
-
-    try {
-        const h = await fetch(API + `/zlecenia/${z.id}/historia`);
-        const historia = await h.json();
-        historiaStatusow = {};
-        historia.forEach(x => historiaStatusow[x.status] = x.czas);
-    } catch(e) {}
-
-    renderujStatusy(z.status);
+    wybierzZdarzenie(z.id, z.numer, z.adres, z.status);
 }
 
-// przy wejściu w statusy
-const _pokaz = pokaz;
-pokaz = function(widok) {
-    _pokaz(widok);
-    if (widok === "statusy" && aktualneZlecenie) {
-        fetch(API + `/zlecenia/${aktualneZlecenie}`)
-            .then(r => r.json())
-            .then(z => renderujStatusy(z.status));
-    }
-};
-
-// ===== ZDJĘCIA / KOMUNIKATY / MAPA / GPS =====
 async function wyslijZdjecie(event) {
-    if (!aktualneZlecenie) { alert("Najpierw wybierz zdarzenie"); return; }
+    if (!aktualneZlecenie) {
+        alert("Najpierw wybierz zdarzenie");
+        return;
+    }
+
     const file = event.target.files[0];
     if (!file) return;
-    const fd = new FormData();
-    fd.append("file", file);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
     try {
-        const res = await fetch(API + `/zlecenia/${aktualneZlecenie}/zdjecie`, { method: "POST", body: fd });
-        alert(res.ok ? "Zdjęcie dodane" : "Błąd");
-    } catch(e) { alert("Błąd połączenia"); }
+        const res = await fetch(API + `/zlecenia/${aktualneZlecenie}/zdjecie`, {
+            method: "POST",
+            body: formData
+        });
+        alert(res.ok ? "Zdjęcie dodane" : "Błąd wysyłania");
+    } catch (e) {
+        alert("Błąd połączenia");
+    }
     event.target.value = "";
 }
-async function wyslijZdjecieZMenu(e) {
-    if (!aktualneZlecenie) { alert("Najpierw wybierz zdarzenie"); pokaz("zdarzenia"); e.target.value=""; return; }
-    await wyslijZdjecie(e);
+
+async function wyslijZdjecieZMenu(event) {
+    if (!aktualneZlecenie) {
+        alert("Najpierw wybierz zdarzenie");
+        pokaz("zdarzenia");
+        event.target.value = "";
+        return;
+    }
+    await wyslijZdjecie(event);
 }
 
 async function ladujKomunikatyMobile() {
@@ -616,47 +627,142 @@ async function ladujKomunikatyMobile() {
         const res = await fetch(API + "/komunikaty/");
         const data = await res.json();
         const box = document.getElementById("lista-komunikatow-mobile");
-        if (!data.length) { box.innerHTML = '<div class="empty">Brak komunikatów</div>'; return; }
+
+        if (data.length === 0) {
+            box.innerHTML = '<div class="empty">Brak komunikatów</div>';
+            return;
+        }
+
         box.innerHTML = data.map(k => `
             <div class="card" style="cursor:default">
-                <div class="komunikat-meta">${new Date(k.czas).toLocaleString("pl-PL")} • ${k.nadawca}</div>
+                <div class="komunikat-meta">
+                    ${new Date(k.czas).toLocaleString("pl-PL")} • ${k.nadawca}
+                </div>
                 <div>${k.tresc}</div>
-            </div>`).join("");
-    } catch(e) {
+            </div>
+        `).join("");
+    } catch (e) {
         document.getElementById("lista-komunikatow-mobile").innerHTML = '<div class="empty">Błąd połączenia</div>';
     }
 }
 
 function initMapa() {
     const info = document.getElementById("map-info");
+
     if (!map) {
         map = L.map("map").setView([50.204310, 18.977784], 13);
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            maxZoom: 19,
+            attribution: "© OpenStreetMap"
+        }).addTo(map);
     }
+
     if (markerCel) map.removeLayer(markerCel);
     if (markerJa) map.removeLayer(markerJa);
-    if (windowTrasaLine) { map.removeLayer(windowTrasaLine); windowTrasaLine = null; }
+    if (windowTrasaLine) {
+        map.removeLayer(windowTrasaLine);
+        windowTrasaLine = null;
+    }
 
-    if (!aktualnyAdres) { info.innerHTML = "Najpierw wybierz zdarzenie"; return; }
-    info.innerHTML = `Cel: <strong>${aktualnyAdres}</strong>`;
+    if (!aktualnyAdres) {
+        info.innerHTML = "Najpierw wybierz zdarzenie z listy";
+        return;
+    }
+
+    info.innerHTML = `Cel: <strong>${aktualnyAdres}</strong><br>Wyznaczanie trasy...`;
 
     fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(aktualnyAdres)}&limit=1`)
         .then(r => r.json())
         .then(data => {
-            if (!data.length) { info.innerHTML = "Nie znaleziono adresu"; return; }
-            const celLat = parseFloat(data[0].lat), celLon = parseFloat(data[0].lon);
-            markerCel = L.marker([celLat, celLon]).addTo(map).bindPopup(aktualnyAdres).openPopup();
+            if (!data.length) {
+                info.innerHTML = "Nie znaleziono adresu";
+                return;
+            }
+
+            const celLat = parseFloat(data[0].lat);
+            const celLon = parseFloat(data[0].lon);
+
+            markerCel = L.marker([celLat, celLon]).addTo(map)
+                .bindPopup(`<b>Cel</b><br>${aktualnyAdres}`).openPopup();
 
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(pos => {
-                    markerJa = L.circleMarker([pos.coords.latitude, pos.coords.longitude], {
-                        radius: 8, color: "#00e676", fillColor: "#00e676", fillOpacity: 0.9
-                    }).addTo(map);
-                    const url = `https://router.project-osrm.org/route/v1/driving/${pos.coords.longitude},${pos.coords.latitude};${celLon},${celLat}?overview=full&geometries=geojson`;
-                    fetch(url).then(r => r.json()).then(rd => {
-                        if (rd.code === "Ok" && rd.routes.length) {
-                            const coords = rd.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
-                            windowTrasaLine = L.polyline(coords, { color: "#2196f3", weight: 6 }).addTo(map);
-                            const km = (rd.routes[0].distance/1000).toFixed(1);
-                            const min = Math.round(rd.routes[0].duration/60);
-                            info.innerHTML = `Cel: <strong>${aktualnyAdres}</strong> • ${km} km
+                    const jaLat = pos.coords.latitude;
+                    const jaLon = pos.coords.longitude;
+
+                    markerJa = L.circleMarker([jaLat, jaLon], {
+                        radius: 8,
+                        color: "#00e676",
+                        fillColor: "#00e676",
+                        fillOpacity: 0.9
+                    }).addTo(map).bindPopup("Twoja pozycja");
+
+                    const routeUrl = `https://router.project-osrm.org/route/v1/driving/${jaLon},${jaLat};${celLon},${celLat}?overview=full&geometries=geojson`;
+
+                    fetch(routeUrl)
+                        .then(r => r.json())
+                        .then(routeData => {
+                            if (routeData.code === "Ok" && routeData.routes.length) {
+                                const route = routeData.routes[0];
+                                const coordinates = route.geometry.coordinates.map(c => [c[1], c[0]]);
+
+                                windowTrasaLine = L.polyline(coordinates, {
+                                    color: "#00e676",
+                                    weight: 6,
+                                    opacity: 0.9
+                                }).addTo(map);
+
+                                const dystansKm = (route.distance / 1000).toFixed(1);
+                                const minuty = Math.round(route.duration / 60);
+
+                                info.innerHTML = `Cel: <strong>${aktualnyAdres}</strong><br>${dystansKm} km • ${minuty} min`;
+                                map.fitBounds(L.featureGroup([markerCel, markerJa, windowTrasaLine]).getBounds().pad(0.15));
+                            } else {
+                                map.fitBounds(L.featureGroup([markerCel, markerJa]).getBounds().pad(0.2));
+                                info.innerHTML = `Cel: <strong>${aktualnyAdres}</strong>`;
+                            }
+                        })
+                        .catch(() => {
+                            map.fitBounds(L.featureGroup([markerCel, markerJa]).getBounds().pad(0.2));
+                        });
+                }, () => {
+                    map.setView([celLat, celLon], 15);
+                    info.innerHTML = `Cel: <strong>${aktualnyAdres}</strong>`;
+                }, { enableHighAccuracy: true });
+            } else {
+                map.setView([celLat, celLon], 15);
+            }
+        })
+        .catch(() => {
+            info.innerHTML = "Błąd wyszukiwania adresu";
+        });
+}
+
+function pobierzGPS() {
+    const box = document.getElementById("gps-info");
+    box.innerHTML = "Pobieranie lokalizacji...";
+
+    if (!navigator.geolocation) {
+        box.innerHTML = "Urządzenie nie wspiera GPS";
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        pos => {
+            const { latitude, longitude, accuracy } = pos.coords;
+            box.innerHTML = `
+                <strong>Aktualna pozycja:</strong><br>
+                Szerokość: ${latitude.toFixed(6)}<br>
+                Długość: ${longitude.toFixed(6)}<br>
+                Dokładność: ±${Math.round(accuracy)} m
+            `;
+        },
+        () => box.innerHTML = "Nie udało się pobrać lokalizacji. Włącz GPS.",
+        { enableHighAccuracy: true, timeout: 10000 }
+    );
+}
+
+pokaz("menu");
+</script>
+</body>
+</html>
