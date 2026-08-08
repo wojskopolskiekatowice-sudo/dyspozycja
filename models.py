@@ -50,3 +50,15 @@ class Komunikat(Base):
     nadawca = Column(String, default="Stanowisko Kierowania")
     czas = Column(DateTime, default=datetime.utcnow)
     przeczytany = Column(Boolean, default=False)
+
+
+class Zdjecie(Base):
+    __tablename__ = "zdjecia"
+
+    id = Column(Integer, primary_key=True, index=True)
+    zlecenie_id = Column(Integer, ForeignKey("zlecenia.id"))
+    dane = Column(Text)  # base64
+    opis = Column(String, nullable=True)
+    czas = Column(DateTime, default=datetime.utcnow)
+
+    zlecenie = relationship("Zlecenie", backref="zdjecia")

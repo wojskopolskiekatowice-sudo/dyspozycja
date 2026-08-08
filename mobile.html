@@ -5,10 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Terminal-ST</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="manifest" href="/static/manifest-mobile.json">
-<meta name="theme-color" content="#00838f">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <style>
         * {
             box-sizing: border-box;
@@ -132,7 +128,7 @@
 
         .status-grid {
             display: flex;
-            height: calc(100vh - 110px);
+            height: calc(100vh - 160px);
             gap: 2px;
             padding: 2px;
             background: #111;
@@ -181,11 +177,11 @@
 
         .bottom-nav button {
             flex: 1;
-            padding: 14px;
+            padding: 14px 6px;
             border: none;
             background: #2d2d2d;
             color: #e0e0e0;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 500;
             cursor: pointer;
         }
@@ -213,6 +209,18 @@
             color: #888;
             margin-bottom: 5px;
         }
+
+        .zdjecia-preview {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 8px 0;
+        }
+
+        .zdjecia-preview img {
+            height: 80px;
+            border: 1px solid #555;
+        }
     </style>
 </head>
 <body>
@@ -237,7 +245,7 @@
             <span class="icon">📡</span>
             Statusy
         </div>
-        <div class="menu-btn" onclick="alert('Funkcja w budowie')">
+        <div class="menu-btn" onclick="document.getElementById('input-zdjecie-menu').click()">
             <span class="icon">📷</span>
             Zrób zdjęcie
         </div>
@@ -249,12 +257,11 @@
             <span class="icon">🌐</span>
             Informacje GPS
         </div>
-        <div class="menu-btn" onclick="wlaczPowiadomienia()">
-            <span class="icon">🔔</span>
-            Powiadomienia
-        </div>
     </div>
 </div>
+
+<!-- ukryty input do zdjęć z menu -->
+<input type="file" id="input-zdjecie-menu" accept="image/*" capture="environment" style="display:none" onchange="wyslijZdjecieZMenu(event)">
 
 <!-- ZDARZENIA -->
 <div id="view-zdarzenia" style="display:none;">
@@ -292,8 +299,11 @@
 
     <div class="bottom-nav">
         <button onclick="pokaz('mapa')">Nawiguj</button>
-        <button onclick="pokaz('zdarzenia')">Lista zdarzeń</button>
+        <button onclick="document.getElementById('input-zdjecie').click()">Zrób zdjęcie</button>
+        <button onclick="pokaz('zdarzenia')">Lista</button>
     </div>
+
+    <input type="file" id="input-zdjecie" accept="image/*" capture="environment" style="display:none" onchange="wyslijZdjecie(event)">
 </div>
 
 <!-- MAPA -->
@@ -329,69 +339,8 @@ let historiaStatusow = {};
 let map = null;
 let markerCel = null;
 let markerJa = null;
+let windowTrasaLine = null;
 
-// ===== POWIADOMIENIA =====
-let ostatnieId = null;
-let powiadomieniaWlaczane = false;
-
-function wlaczPowiadomienia() {
-    if (!("Notification" in window)) {
-        alert("Twoja przeglądarka nie wspiera powiadomień");
-        return;
-    }
-
-    Notification.requestPermission().then(permission => {
-        if (permission === "granted") {
-            powiadomieniaWlaczane = true;
-            alert("Powiadomienia włączone");
-        } else {
-            alert("Nie udzielono zgody na powiadomienia");
-        }
-    });
-}
-
-async function sprawdzNoweZlecenia() {
-    try {
-        const res = await fetch(API + "/zlecenia/");
-        const data = await res.json();
-        const aktywne = data.filter(z => z.status === "Nowe");
-
-        if (aktywne.length > 0) {
-            const najnowsze = aktywne[0];
-
-            if (ostatnieId !== null && najnowsze.id !== ostatnieId) {
-                if (powiadomieniaWlaczane && Notification.permission === "granted") {
-                    new Notification("Nowe zgłoszenie!", {
-                        body: `${najnowsze.numer} – ${najnowsze.adres}`,
-                        requireInteraction: true
-                    });
-                }
-
-                if (navigator.vibrate) {
-                    navigator.vibrate([500, 200, 500, 200, 500]);
-                }
-
-                try {
-                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                    const osc = ctx.createOscillator();
-                    const gain = ctx.createGain();
-                    osc.connect(gain);
-                    gain.connect(ctx.destination);
-                    osc.frequency.value = 880;
-                    gain.gain.value = 0.3;
-                    osc.start();
-                    setTimeout(() => osc.stop(), 400);
-                } catch(e) {}
-            }
-
-            ostatnieId = najnowsze.id;
-        }
-    } catch (e) {}
-}
-
-setInterval(sprawdzNoweZlecenia, 5000);
-
-// ===== RESZTA =====
 const STATUSY = [
     { key: "Wyjazd", label: "Wyjazd" },
     { key: "Na miejscu", label: "Na miejscu" },
@@ -500,6 +449,48 @@ async function zmienStatus(status) {
     wybierzZdarzenie(z.id, z.numer, z.adres, z.status);
 }
 
+// ===== ZDJĘCIA =====
+async function wyslijZdjecie(event) {
+    if (!aktualneZlecenie) {
+        alert("Najpierw wybierz zdarzenie");
+        return;
+    }
+
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+        const res = await fetch(API + `/zlecenia/${aktualneZlecenie}/zdjecie`, {
+            method: "POST",
+            body: formData
+        });
+
+        if (res.ok) {
+            alert("Zdjęcie dodane do zdarzenia");
+        } else {
+            alert("Błąd wysyłania zdjęcia");
+        }
+    } catch (e) {
+        alert("Błąd połączenia");
+    }
+
+    event.target.value = "";
+}
+
+async function wyslijZdjecieZMenu(event) {
+    if (!aktualneZlecenie) {
+        alert("Najpierw wybierz zdarzenie z listy");
+        pokaz("zdarzenia");
+        event.target.value = "";
+        return;
+    }
+    await wyslijZdjecie(event);
+}
+
+// ===== KOMUNIKATY =====
 async function ladujKomunikatyMobile() {
     try {
         const res = await fetch(API + "/komunikaty/");
@@ -524,6 +515,7 @@ async function ladujKomunikatyMobile() {
     }
 }
 
+// ===== MAPA =====
 function initMapa() {
     const info = document.getElementById("map-info");
 
@@ -537,9 +529,9 @@ function initMapa() {
 
     if (markerCel) map.removeLayer(markerCel);
     if (markerJa) map.removeLayer(markerJa);
-    if (window.trasaLine) {
-        map.removeLayer(window.trasaLine);
-        window.trasaLine = null;
+    if (windowTrasaLine) {
+        map.removeLayer(windowTrasaLine);
+        windowTrasaLine = null;
     }
 
     if (!aktualnyAdres) {
@@ -549,7 +541,6 @@ function initMapa() {
 
     info.innerHTML = `Cel: <strong>${aktualnyAdres}</strong><br>Wyznaczanie trasy...`;
 
-    // Najpierw geokodujemy cel
     fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(aktualnyAdres)}&limit=1`)
         .then(r => r.json())
         .then(data => {
@@ -564,7 +555,6 @@ function initMapa() {
             markerCel = L.marker([celLat, celLon]).addTo(map)
                 .bindPopup(`<b>Cel</b><br>${aktualnyAdres}`).openPopup();
 
-            // Pobieramy aktualną pozycję
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(pos => {
                     const jaLat = pos.coords.latitude;
@@ -577,7 +567,6 @@ function initMapa() {
                         fillOpacity: 0.9
                     }).addTo(map).bindPopup("Twoja pozycja");
 
-                    // Prawdziwa trasa OSRM
                     const routeUrl = `https://router.project-osrm.org/route/v1/driving/${jaLon},${jaLat};${celLon},${celLat}?overview=full&geometries=geojson`;
 
                     fetch(routeUrl)
@@ -587,7 +576,7 @@ function initMapa() {
                                 const route = routeData.routes[0];
                                 const coordinates = route.geometry.coordinates.map(c => [c[1], c[0]]);
 
-                                window.trasaLine = L.polyline(coordinates, {
+                                windowTrasaLine = L.polyline(coordinates, {
                                     color: "#00e676",
                                     weight: 6,
                                     opacity: 0.9
@@ -598,10 +587,9 @@ function initMapa() {
 
                                 info.innerHTML = `Cel: <strong>${aktualnyAdres}</strong><br>${dystansKm} km • ${minuty} min`;
 
-                                const group = L.featureGroup([markerCel, markerJa, window.trasaLine]);
+                                const group = L.featureGroup([markerCel, markerJa, windowTrasaLine]);
                                 map.fitBounds(group.getBounds().pad(0.15));
                             } else {
-                                // fallback
                                 map.fitBounds(L.featureGroup([markerCel, markerJa]).getBounds().pad(0.2));
                                 info.innerHTML = `Cel: <strong>${aktualnyAdres}</strong>`;
                             }

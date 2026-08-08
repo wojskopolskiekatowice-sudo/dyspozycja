@@ -57,10 +57,6 @@ class StatusHistoria(BaseModel):
         from_attributes = True
 
 
-class ZlecenieSzczegoly(Zlecenie):
-    historia: List[StatusHistoria] = []
-
-
 class KomunikatBase(BaseModel):
     tresc: str
     nadawca: Optional[str] = "Stanowisko Kierowania"
@@ -74,6 +70,24 @@ class Komunikat(KomunikatBase):
     id: int
     czas: datetime
     przeczytany: bool
+
+    class Config:
+        from_attributes = True
+
+
+class ZdjecieBase(BaseModel):
+    opis: Optional[str] = None
+
+
+class ZdjecieCreate(ZdjecieBase):
+    dane: str
+
+
+class Zdjecie(ZdjecieBase):
+    id: int
+    zlecenie_id: int
+    czas: datetime
+    dane: str
 
     class Config:
         from_attributes = True

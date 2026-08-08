@@ -1,10 +1,11 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, File, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from typing import List
 from twilio.rest import Client
+import base64
 
 import models, schemas
 from database import engine, get_db, Base
@@ -21,8 +22,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Statyczne pliki
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# ========== TWILIO - UZUPEŁNIJ ==========
+TWILIO_ACCOUNT_SID = "WKL EJ_SWOJE_ACCOUNT_SID"
+TWILIO_AUTH_TOKEN = "WKL EJ_SWOJ_AUTH_TOKEN"
+TWILIO_NUMBER = "+48XXXXXXXXX"
+NUMER_DO_DZWORNIENIA = "+48XXXXXXXXX"
+
+twilio_client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+# =======================================
+
 
 @app.get("/")
 def read_root():
@@ -62,7 +72,6 @@ def create_zlecenie(zlecenie: schemas.ZlecenieCreate, db: Session = Depends(get_
     db.commit()
     db.refresh(db_zlecenie)
 
-    # Pierwszy wpis w historii
     historia = models.StatusHistoria(
         zlecenie_id=db_zlecenie.id,
         status="Nowe",
@@ -71,16 +80,15 @@ def create_zlecenie(zlecenie: schemas.ZlecenieCreate, db: Session = Depends(get_
     db.add(historia)
     db.commit()
 
-    # ===== DZWONIENIE PRZEZ TWILIO =====
     try:
         call = twilio_client.calls.create(
             to=NUMER_DO_DZWORNIENIA,
             from_=TWILIO_NUMBER,
             twiml='<Response><Say language="pl-PL">Uwaga. Nowe zgłoszenie. Sprawdź terminal.</Say></Response>'
         )
-        print(f"Połączenie zainicjowane: {call.sid}")
+        print(f"Połączenie: {call.sid}")
     except Exception as e:
-        print(f"Błąd dzwonienia Twilio: {e}")
+        print(f"Błąd Twilio: {e}")
 
     return db_zlecenie
 
@@ -143,6 +151,32 @@ def przypisz_zastep(zlecenie_id: int, zastep_id: int, db: Session = Depends(get_
     db.commit()
     db.refresh(zlecenie)
     return zlecenie
+
+
+# ========== ZDJĘCIA ==========
+@app.post("/zlecenia/{zlecenie_id}/zdjecie", response_model=schemas.Zdjecie)
+async def dodaj_zdjecie(zlecenie_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    zlecenie = db.query(models.Zlecenie).filter(models.Zlecenie.id == zlecenie_id).first()
+    if not zlecenie:
+        raise HTTPException(status_code=404, detail="Zlecenie nie znalezione")
+
+    tresc = await file.read()
+    dane_b64 = base64.b64encode(tresc).decode("utf-8")
+
+    zdjecie = models.Zdjecie(
+        zlecenie_id=zlecenie_id,
+        dane=dane_b64,
+        opis=file.filename
+    )
+    db.add(zdjecie)
+    db.commit()
+    db.refresh(zdjecie)
+    return zdjecie
+
+
+@app.get("/zlecenia/{zlecenie_id}/zdjecia", response_model=List[schemas.Zdjecie])
+def get_zdjecia(zlecenie_id: int, db: Session = Depends(get_db)):
+    return db.query(models.Zdjecie).filter(models.Zdjecie.zlecenie_id == zlecenie_id).all()
 
 
 # ========== KOMUNIKATY ==========
