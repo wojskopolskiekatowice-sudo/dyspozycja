@@ -54,31 +54,27 @@
             background: #2d2d2d;
             border: none;
             color: #e0e0e0;
-            padding: 28px 10px;
+            padding: 22px 8px;
             text-align: center;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 500;
             cursor: pointer;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 110px;
+            min-height: 100px;
         }
 
-        .menu-btn:active {
-            background: #3a3a3a;
-        }
+        .menu-btn:active { background: #3a3a3a; }
 
         .menu-btn .icon {
-            font-size: 26px;
-            margin-bottom: 10px;
+            font-size: 24px;
+            margin-bottom: 8px;
             display: block;
         }
 
-        .content {
-            padding: 8px;
-        }
+        .content { padding: 8px; }
 
         .card {
             background: #2d2d2d;
@@ -88,9 +84,7 @@
             cursor: pointer;
         }
 
-        .card:active {
-            background: #3a3a3a;
-        }
+        .card:active { background: #3a3a3a; }
 
         .card-numer {
             font-size: 17px;
@@ -186,11 +180,9 @@
             cursor: pointer;
         }
 
-        .bottom-nav button:active {
-            background: #3a3a3a;
-        }
+        .bottom-nav button:active { background: #3a3a3a; }
 
-        #map {
+        #map, #map-hydranty {
             height: calc(100vh - 130px);
             width: 100%;
             border: 1px solid #444;
@@ -208,18 +200,6 @@
             font-size: 12px;
             color: #888;
             margin-bottom: 5px;
-        }
-
-        .zdjecia-preview {
-            display: flex;
-            gap: 8px;
-            overflow-x: auto;
-            padding: 8px 0;
-        }
-
-        .zdjecia-preview img {
-            height: 80px;
-            border: 1px solid #555;
         }
     </style>
 </head>
@@ -257,10 +237,13 @@
             <span class="icon">🌐</span>
             Informacje GPS
         </div>
+        <div class="menu-btn" onclick="pokaz('hydranty')">
+            <span class="icon">🚰</span>
+            Hydranty
+        </div>
     </div>
 </div>
 
-<!-- ukryty input do zdjęć z menu -->
 <input type="file" id="input-zdjecie-menu" accept="image/*" capture="environment" style="display:none" onchange="wyslijZdjecieZMenu(event)">
 
 <!-- ZDARZENIA -->
@@ -306,7 +289,7 @@
     <input type="file" id="input-zdjecie" accept="image/*" capture="environment" style="display:none" onchange="wyslijZdjecie(event)">
 </div>
 
-<!-- MAPA -->
+<!-- MAPA TRASY -->
 <div id="view-mapa" style="display:none;">
     <div class="header">
         <button class="back-btn" onclick="pokaz('menu')">← Menu</button>
@@ -315,6 +298,17 @@
     </div>
     <div class="map-info" id="map-info">Wybierz zdarzenie, aby zobaczyć trasę</div>
     <div id="map"></div>
+</div>
+
+<!-- HYDRANTY -->
+<div id="view-hydranty" style="display:none;">
+    <div class="header">
+        <button class="back-btn" onclick="pokaz('menu')">← Menu</button>
+        <div>Mapa hydrantów</div>
+        <div></div>
+    </div>
+    <div class="map-info" id="hydranty-info">Pobieranie hydrantów...</div>
+    <div id="map-hydranty"></div>
 </div>
 
 <!-- GPS -->
@@ -341,6 +335,9 @@ let markerCel = null;
 let markerJa = null;
 let windowTrasaLine = null;
 
+let mapHydranty = null;
+let warstwaHydrantow = null;
+
 const STATUSY = [
     { key: "Wyjazd", label: "Wyjazd" },
     { key: "Na miejscu", label: "Na miejscu" },
@@ -350,7 +347,7 @@ const STATUSY = [
 ];
 
 function pokaz(widok) {
-    ["menu", "zdarzenia", "statusy", "mapa", "gps", "komunikaty"].forEach(v => {
+    ["menu", "zdarzenia", "statusy", "mapa", "gps", "komunikaty", "hydranty"].forEach(v => {
         const el = document.getElementById("view-" + v);
         if (el) el.style.display = "none";
     });
@@ -364,6 +361,7 @@ function pokaz(widok) {
     if (widok === "mapa") initMapa();
     if (widok === "gps") pobierzGPS();
     if (widok === "komunikaty") ladujKomunikatyMobile();
+    if (widok === "hydranty") initHydranty();
 }
 
 async function ladujZdarzenia() {
@@ -515,7 +513,7 @@ async function ladujKomunikatyMobile() {
     }
 }
 
-// ===== MAPA =====
+// ===== MAPA TRASY =====
 function initMapa() {
     const info = document.getElementById("map-info");
 
@@ -610,6 +608,97 @@ function initMapa() {
         .catch(() => {
             info.innerHTML = "Błąd wyszukiwania adresu";
         });
+}
+
+// ===== MAPA HYDRANTÓW =====
+function initHydranty() {
+    const info = document.getElementById("hydranty-info");
+    info.innerHTML = "Pobieranie lokalizacji i hydrantów...";
+
+    if (!mapHydranty) {
+        mapHydranty = L.map("map-hydranty").setView([50.204310, 18.977784], 15);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            maxZoom: 19,
+            attribution: "© OpenStreetMap"
+        }).addTo(mapHydranty);
+    }
+
+    // Po pokazaniu kontenera mapa musi się odświeżyć
+    setTimeout(() => {
+        mapHydranty.invalidateSize();
+    }, 200);
+
+    const hydrantIcon = L.divIcon({
+        className: "",
+        html: `<div style="
+            background:#e53935;
+            width:16px;height:16px;
+            border-radius:50%;
+            border:2px solid #fff;
+            box-shadow:0 0 4px rgba(0,0,0,0.6);
+        "></div>`,
+        iconSize: [16, 16],
+        iconAnchor: [8, 8]
+    });
+
+    function ladujHydranty(lat, lon) {
+        const query = `
+            [out:json][timeout:25];
+            (
+              node["emergency"="fire_hydrant"](around:900,${lat},${lon});
+              node["fire_hydrant"](around:900,${lat},${lon});
+            );
+            out body;
+        `;
+
+        fetch("https://overpass-api.de/api/interpreter", {
+            method: "POST",
+            body: query
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (warstwaHydrantow) {
+                mapHydranty.removeLayer(warstwaHydrantow);
+            }
+
+            warstwaHydrantow = L.layerGroup().addTo(mapHydranty);
+
+            const elementy = data.elements || [];
+            info.innerHTML = `Znaleziono <strong>${elementy.length}</strong> hydrantów (±900 m)`;
+
+            elementy.forEach(el => {
+                if (!el.lat || !el.lon) return;
+
+                const typ = el.tags?.["fire_hydrant:type"] || el.tags?.type || "hydrant";
+                const cisnienie = el.tags?.["fire_hydrant:pressure"] || "";
+                const opis = [
+                    `<b>Hydrant</b>`,
+                    `Typ: ${typ}`,
+                    cisnienie ? `Ciśnienie: ${cisnienie}` : "",
+                    `${el.lat.toFixed(5)}, ${el.lon.toFixed(5)}`
+                ].filter(Boolean).join("<br>");
+
+                L.marker([el.lat, el.lon], { icon: hydrantIcon })
+                    .bindPopup(opis)
+                    .addTo(warstwaHydrantow);
+            });
+
+            mapHydranty.setView([lat, lon], 16);
+        })
+        .catch(() => {
+            info.innerHTML = "Błąd pobierania danych (Overpass API)";
+        });
+    }
+
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            pos => ladujHydranty(pos.coords.latitude, pos.coords.longitude),
+            () => ladujHydranty(50.204310, 18.977784),
+            { enableHighAccuracy: true, timeout: 8000 }
+        );
+    } else {
+        ladujHydranty(50.204310, 18.977784);
+    }
 }
 
 function pobierzGPS() {
